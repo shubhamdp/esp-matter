@@ -52,6 +52,20 @@ static esp_err_t app_driver_bound_console_handler(int argc, char **argv)
     return ESP_OK;
 }
 
+extern "C"
+{
+
+void app_driver_bound_on_off(bool on)
+{
+    g_cluster_id = OnOff::Id;
+    g_command_id = on ? OnOff::Commands::On::Id : OnOff::Commands::Off::Id;
+    lock::chip_stack_lock(portMAX_DELAY);
+    client::cluster_update(switch_endpoint_id, g_cluster_id);
+    lock::chip_stack_unlock();
+}
+
+}
+
 static esp_err_t app_driver_client_console_handler(int argc, char **argv)
 {
     if (argc == 1 && strncmp(argv[0], "help", sizeof("help")) == 0) {

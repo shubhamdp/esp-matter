@@ -6,6 +6,10 @@ if(NOT DEFINED ENV{ESP_MATTER_PATH})
     message(FATAL_ERROR "Please set ESP_MATTER_PATH to the path of esp-matter repo")
 endif(NOT DEFINED ENV{ESP_MATTER_PATH})
 
+if (NOT DEFINED ENV{ESP_BOX_PATH})
+    message(FATAL_ERROR "Please set ESP_BOX_PATH to the path of esp-box repo")
+endif()
+
 if(NOT DEFINED ENV{ESP_MATTER_DEVICE_PATH})
     if("${IDF_TARGET}" STREQUAL "esp32" OR "${IDF_TARGET}" STREQUAL "")
         set(ENV{ESP_MATTER_DEVICE_PATH} $ENV{ESP_MATTER_PATH}/device_hal/device/esp32_devkit_c)
@@ -13,6 +17,8 @@ if(NOT DEFINED ENV{ESP_MATTER_DEVICE_PATH})
         set(ENV{ESP_MATTER_DEVICE_PATH} $ENV{ESP_MATTER_PATH}/device_hal/device/esp32c3_devkit_m)
     elseif("${IDF_TARGET}" STREQUAL "esp32h2")
         set(ENV{ESP_MATTER_DEVICE_PATH} $ENV{ESP_MATTER_PATH}/device_hal/device/esp32h2_devkit_c)
+    elseif("${IDF_TARGET}" STREQUAL "esp32s3")
+        set(ENV{ESP_MATTER_DEVICE_PATH} $ENV{ESP_MATTER_PATH}/device_hal/device/esp32s3_devkit_c)
     else()
         message(FATAL_ERROR "Unsupported IDF_TARGET")
     endif()
@@ -24,6 +30,7 @@ set(PROJECT_VER_NUMBER 1)
 set(ESP_MATTER_PATH $ENV{ESP_MATTER_PATH})
 set(MATTER_SDK_PATH ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip)
 set(ZAP_GENERATED_PATH ${CMAKE_CURRENT_LIST_DIR}/main/zap-generated)
+set(ESP_BOX_PATH $ENV{ESP_BOX_PATH})
 
 # This should be done before using the IDF_TARGET variable.
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
@@ -31,9 +38,11 @@ include($ENV{ESP_MATTER_DEVICE_PATH}/esp_matter_device.cmake)
 
 set(EXTRA_COMPONENT_DIRS
     "../common"
+    "${IDF_PATH}/examples/common_components/led_strip"
     "${MATTER_SDK_PATH}/config/esp32/components"
     "${ESP_MATTER_PATH}/components"
     "${ESP_MATTER_PATH}/device_hal/device"
+    "${ESP_BOX_PATH}/components"
     ${extra_components_dirs_append})
 
 project(light_switch)

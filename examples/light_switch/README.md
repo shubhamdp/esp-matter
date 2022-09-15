@@ -1,3 +1,5 @@
+IDF Commit : 2bdea81b2aac75105dcfb66d38ac4227a1212b4d
+
 # Light Switch
 
 This example creates an On/Off Light Switch device using the data model.
