@@ -19,6 +19,7 @@
 #include "led_strip.h"
 #include "ui_main.h"
 #include "ui_device_ctrl.h"
+#include "app_driver.h"
 
 static const char *TAG = "app_led";
 
@@ -281,10 +282,12 @@ esp_err_t app_pwm_led_set_power(bool power)
     if (power) {
         g_led_state.on = true;
         ui_dev_ctrl_set_state(UI_DEV_LIGHT, 1);
+        app_driver_bound_on_off(true);
     } else {
         g_led_state.on = false;
         update_pwm_led(0, 0, 0);
         ui_dev_ctrl_set_state(UI_DEV_LIGHT, 0);
+        app_driver_bound_on_off(false);
         return ret_val;
     }
     red = g_gamma_table[g_led_state.r];

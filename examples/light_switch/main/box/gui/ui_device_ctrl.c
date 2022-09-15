@@ -26,10 +26,6 @@ LV_IMG_DECLARE(icon_switch_off)
 LV_IMG_DECLARE(icon_air_on)
 LV_IMG_DECLARE(icon_air_off)
 
-static ui_dev_type_t g_active_dev_type = UI_DEV_LIGHT;
-static lv_obj_t *g_func_btn[4] = {NULL};
-static void (*g_dev_ctrl_end_cb)(void) = NULL;
-
 typedef struct {
     ui_dev_type_t type;
     const char *name;
@@ -39,10 +35,12 @@ typedef struct {
 
 static const btn_img_src_t img_src_list[] = {
     { .type = UI_DEV_LIGHT, .name = "Light", .img_on = &icon_light_on, .img_off = &icon_light_off },
-    { .type = UI_DEV_SWITCH, .name = "Switch", .img_on = &icon_switch_on, .img_off = &icon_switch_off },
-    { .type = UI_DEV_FAN, .name = "Fan", .img_on = &icon_fan_on, .img_off = &icon_fan_off },
-    { .type = UI_DEV_AIR, .name = "Air", .img_on = &icon_air_on, .img_off = &icon_air_off },
 };
+
+static ui_dev_type_t g_active_dev_type = UI_DEV_LIGHT;
+static size_t g_item_size = sizeof(img_src_list) / sizeof(img_src_list[0]);
+static lv_obj_t *g_func_btn[4] = {NULL};
+static void (*g_dev_ctrl_end_cb)(void) = NULL;
 
 void ui_dev_ctrl_set_state(ui_dev_type_t type, bool state)
 {
@@ -125,7 +123,7 @@ void ui_device_ctrl_start(void (*fn)(void))
     lv_obj_center(lab_btn_text);
     lv_obj_add_event_cb(btn_return, ui_dev_ctrl_page_return_click_cb, LV_EVENT_CLICKED, page);
 
-    for (size_t i = 0; i < 4; i++) {
+    for (size_t i = 0; i < g_item_size; i++) {
         g_func_btn[i] = lv_btn_create(page);
         lv_obj_set_size(g_func_btn[i], 85, 85);
         lv_obj_add_style(g_func_btn[i], &ui_button_styles()->style_focus, LV_STATE_FOCUS_KEY);
@@ -143,7 +141,7 @@ void ui_device_ctrl_start(void (*fn)(void))
         lv_obj_align(g_func_btn[i], LV_ALIGN_CENTER, i % 2 ? 48 : -48, i < 2 ? -48 - 3 : 48 - 3);
 
         lv_obj_t *img = lv_img_create(g_func_btn[i]);
-        lv_img_set_src(img, img_src_list[i].img_off);
+        lv_img_set_src(img, img_src_list[i].img_on);
         lv_obj_align(img, LV_ALIGN_CENTER, 0, -10);
         lv_obj_set_user_data(img, (void *) &img_src_list[i]);
 
