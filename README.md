@@ -26,3 +26,7 @@ git clone --recursive https://github.com/espressif/esp-matter.git
 ## Documentation
 
 Refer the [Programming Guide](https://docs.espressif.com/projects/esp-matter/en/main/) for the latest version of the documentation.
+
+## Launchpad
+
+[Try launchpad](https://espressif.github.io/esp-launchpad/?flashConfigURL=https://espressif.github.io/esp-matter/launchpad.toml)
