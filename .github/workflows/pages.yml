@@ -1,0 +1,191 @@
+# Simple workflow for deploying static content to GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # Single deploy job since we're just deploying
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    container:
+      image: shubhamdpatil/esp-matter:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: idf stuff
+        run: |
+          export ESP_MATTER_PATH=$PWD
+          rm -rf connectedhomeip/connectedhomeip
+          ln -s $CHIP_PATH connectedhomeip
+          mkdir -p images
+          . $IDF_PATH/export.sh
+          . $ESP_MATTER_PATH/export.sh
+          echo "## Images" > $ESP_MATTER_PATH/images/README.md
+
+      - name: build lighting-app/esp32
+        run: |
+          export ESP_MATTER_PATH=$PWD
+          . $IDF_PATH/export.sh
+          . $ESP_MATTER_PATH/export.sh
+          cd $ESP_MATTER_PATH/connectedhomeip/connectedhomeip/examples/lighting-app/esp32
+          idf.py set-target esp32 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+          idf.py set-target esp32c3 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+      - name: build all-clusters-app/esp32
+        run: |
+          export ESP_MATTER_PATH=$PWD
+          . $IDF_PATH/export.sh
+          . $ESP_MATTER_PATH/export.sh
+          cd $ESP_MATTER_PATH/connectedhomeip/connectedhomeip/examples/all-clusters-app/esp32
+          idf.py set-target esp32 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+          
+          idf.py set-target esp32c3 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+      - name: build esp-matter light
+        run: |
+          export ESP_MATTER_PATH=$PWD
+          . $IDF_PATH/export.sh
+          . $ESP_MATTER_PATH/export.sh
+          cd $ESP_MATTER_PATH/examples/light
+          idf.py set-target esp32 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+          idf.py set-target esp32c3 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+      - name: build esp-matter light_switch
+        run: |
+          export ESP_MATTER_PATH=$PWD
+          . $IDF_PATH/export.sh
+          . $ESP_MATTER_PATH/export.sh
+          cd $ESP_MATTER_PATH/examples/light_switch
+          idf.py set-target esp32 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+          idf.py set-target esp32c3 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+      - name: build esp-matter zap_light
+        run: |
+          export ESP_MATTER_PATH=$PWD
+          . $IDF_PATH/export.sh
+          . $ESP_MATTER_PATH/export.sh
+          cd $ESP_MATTER_PATH/examples/zap_light
+          idf.py set-target esp32 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+          idf.py set-target esp32c3 build
+          BL_OFFSET=`grep CONFIG_BOOTLOADER_OFFSET_IN_FLASH sdkconfig | awk -F = '{print $2}'`
+          PT_OFFSET=`grep CONFIG_PARTITION_TABLE_OFFSET sdkconfig | awk -F = '{print $2}'`
+          APP_OFFSET=`gen_esp32part.py build/partition_table/partition-table.bin 2>/dev/null | grep ota_0 | awk -F , '{print $4}'`
+          TARGET_CHIP=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          APP_BIN=`cat build/project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          esptool.py --chip $TARGET_CHIP merge_bin -o "$ESP_MATTER_PATH/images/$TARGET_CHIP"_"$APP_BIN" --flash_size 4MB $BL_OFFSET build/bootloader/bootloader.bin $PT_OFFSET build/partition_table/partition-table.bin $APP_OFFSET build/$APP_BIN
+          echo "["$TARGET_CHIP"_"$APP_BIN"]("./$TARGET_CHIP"_"$APP_BIN")"  >> $ESP_MATTER_PATH/images/README.md
+          echo "" >> $ESP_MATTER_PATH/images/README.md
+
+      - name: generate launchpad config
+        run: |
+          export ESP_MATTER_PATH=$PWD
+          cd $ESP_MATTER_PATH/images
+          $ESP_MATTER_PATH/tools/launchpad/generate_launchpad_config.sh
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: 'images/'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
