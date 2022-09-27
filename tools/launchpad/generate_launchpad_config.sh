@@ -24,7 +24,7 @@ OUT_FILE=launchpad.toml
 
 cat <<EOF >> $OUT_FILE
 esp_toml_version = 1.0
-firmware_images_url = "https://espressif.github.io/esp-matter/"
+firmware_images_url = "https://shubhamdp.github.io/esp-matter/"
 
 EOF
 
