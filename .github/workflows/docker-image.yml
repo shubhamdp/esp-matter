@@ -17,8 +17,7 @@ name: Docker Image CI
 on:
   push:
     # Runs when esp-matter-builds file changes
-    # TODO: Change to main
-    branches: [ "chip_docker" ]
+    branches: [ "main" ]
     paths:
       - "tools/docker/esp-matter-builds"
 
