@@ -32,8 +32,11 @@ on:
 
 # TODO: uncomment the remove the current one when raising MR
 env:
-  #  DOCKERHUB_REPO: ${{ github.repository_owner }}/esp-matter
+  # Platforms to build the image for
+  BUILD_PLATFORMS: linux/amd64,linux/arm64
+  #  DOCKERHUB_REPO: ${{ github.repository_owner }}/${{ github.repository }}
   DOCKERHUB_REPO: shubhamdpatil/esp-matter
+  TAG_NAME: chip
 
 jobs:
   build:
@@ -44,15 +47,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker build . --file tools/docker/esp-matter-builds --tag ${{env.DOCKERHUB_REPO}}:latest
-
-    - name: docker login
-      env:
-        DOCKER_USER: ${{secrets.DOCKER_USER}}
-        DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
-      run: |
-        docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-    - name: docker push
-      run: docker push ${{env.DOCKERHUB_REPO}}:latest
+      # The following steps are the standard boilerplate from
+      # https://github.com/marketplace/actions/build-and-push-docker-images
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up QEMU for multiarch builds
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: tools/docker
+          push: true
+          tags: ${{ env.DOCKERHUB_REPO }}:${{ env.TAG_NAME }}
+          platforms: ${{ env.BUILD_PLATFORMS }}
