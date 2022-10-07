@@ -64,7 +64,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: tools/docker
-          file: esp-matter-builds
+          file: tools/docker/esp-matter-builds
           push: true
           tags: ${{ env.DOCKERHUB_REPO }}:${{ env.TAG_NAME }}
           platforms: ${{ env.BUILD_PLATFORMS }}
