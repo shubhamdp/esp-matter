@@ -36,6 +36,7 @@ jobs:
 
     - name: Build a binary wheel and a source tarball
       run: |
+        cd tools/mfg_tool
         python3 -m build --sdist --wheel --outdir dist/ .
 
     - name: Publish distribution 📦 to Test PyPI
