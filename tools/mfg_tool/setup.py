@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# SPDX-FileCopyrightText: 2020-2022 Espressif Systems (Shanghai) CO LTD
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2020-2023 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 import os
@@ -9,7 +9,6 @@ def get_install_requires():
     with open(os.path.realpath('requirements.txt')) as f:
         required = f.read().splitlines()
         return required
-
 
 try:
     from setuptools import find_packages, setup
@@ -38,7 +37,7 @@ Documentation
 Visit online `esp-matter-mfg-tool
 documentation <https://github.com/espressif/
 esp-matter/tree/main/tools/mfg_tool>`_ \
-or run ``mfg_tool.py -h``.
+or run ``esp-matter-mfg-tool.py -h``.
 
 License
 -------
@@ -70,7 +69,6 @@ setup(
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Operating System :: POSIX",
-        "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS :: MacOS X",
         "Topic :: Software Development :: Embedded Systems",
         "Programming Language :: Python :: 3.9",
