@@ -3,7 +3,7 @@ name: mfg tool release
 on:
   push:
     paths:
-      - tools/mfg_tool
+      - tools/mfg_tool/**
       - .github/workflows/upload_mfg_tool_to_pypi.yaml
     branches:
       - py_mfg_tool
