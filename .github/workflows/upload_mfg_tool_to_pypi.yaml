@@ -28,10 +28,6 @@ jobs:
         UPLOAD=$(python3 -c 'from packaging import version; import os; print(version.parse(os.environ["PV"]) < version.parse(os.environ["CV"]))')
         echo "SHALL_UPLOAD=$UPLOAD" >> $GITHUB_ENV
 
-    # - name: Install pypa/build
-    #   run: |
-    #     python3 -m pip install build --user
-
     - name: Build a binary wheel and a source tarball
       run: |
         cd tools/mfg_tool
