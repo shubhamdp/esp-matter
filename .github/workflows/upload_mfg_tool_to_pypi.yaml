@@ -21,6 +21,7 @@ jobs:
 
     - name: Print versions
       run: |
+        cd tools/mfg_tool
         PV=$(curl https://test.pypi.org/pypi/esp-matter-mfg-tool/json 2>/dev/null | jq -r '.info.version')
         CV=$(python setup.py --version 2>/dev/null)
         echo "PUBLISHED_VERSION=$PV" >> $GITHUB_ENV
