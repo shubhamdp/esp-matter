@@ -1,0 +1,44 @@
+name: mfg tool release
+
+on:
+  push:
+    paths:
+      - tools/mfg_tool
+      - .github/workflows/upload_mfg_tool_to_pypi.yaml
+    branches:
+      - py_mfg_tool
+
+jobs:
+  build_and_upload:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Version Check
+      run: |
+        PUBLISHED_VERSION=$(curl https://test.pypi.org/pypi/esp-secure-cert-tool/json 2>/dev/null | jq -r '.info.version')
+        CURRENT_VERSION=$(python setup.py --version 2>/dev/null)
+        echo "PUBLISHED_VERSION=$PUBLISHED_VERSION" >> $GITHUB_ENV
+        echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+    - if: ${{ env.PUBLISHED_VERSION }} != $ {{ env.CURRENT_VERSION }}
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install pypa/build
+      run: |
+        python3 -m pip install build --user
+
+    - name: Build a binary wheel and a source tarball
+      run: |
+        python3 -m build --sdist --wheel --outdir dist/ .
+
+    - name: Publish distribution 📦 to Test PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.TEST_PYPI_TOKEN }}
+        repository-url: https://test.pypi.org/legacy/
