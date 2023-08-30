@@ -37,22 +37,12 @@ from types import SimpleNamespace
 
 from esp_secure_cert.tlv_format import *
 
-if not os.getenv('IDF_PATH'):
-    logging.error("IDF_PATH environment variable is not set")
-    sys.exit(1)
-
-if not os.getenv('ESP_MATTER_PATH'):
-    logging.error("ESP_MATTER_PATH environment variable is not set")
-    sys.exit(1)
-
-sys.path.insert(0, os.path.join(os.getenv('ESP_MATTER_PATH'), 'connectedhomeip', 'connectedhomeip', 'scripts', 'tools', 'spake2p'))
-from spake2p import generate_verifier
-
-sys.path.insert(0, os.path.join(os.getenv('IDF_PATH'), 'tools', 'mass_mfg'))
-from mfg_gen import generate
-
-sys.path.insert(0, os.path.join(os.getenv('ESP_MATTER_PATH'), 'connectedhomeip', 'connectedhomeip', 'src', 'setup_payload', 'python'))
-from generate_setup_payload import SetupPayload, CommissioningFlow
+# In order to made the esp-matter-mfg-tool standalone we copied few dependencies from esp-idf
+# and connectedhomeip to deps/ directory.
+# TODO: Remove the dependencies from deps/ once available on pypi
+from deps.spake2p import generate_verifier
+from deps.mfg_gen import generate
+from deps.generate_setup_payload import SetupPayload, CommissioningFlow
 
 TOOLS = {
     'chip-cert': None,
