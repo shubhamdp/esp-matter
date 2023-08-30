@@ -38,7 +38,7 @@ jobs:
         python3 -m build --sdist --wheel --outdir dist/ .
 
     - name: Publish distribution 📦 to Test PyPI
-      if: ${{ env.SHALL_UPLOAD }} == 'True'
+      if: ${{ env.SHALL_UPLOAD == 'True' }}
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.TEST_PYPI_TOKEN }}
