@@ -24,7 +24,7 @@ jobs:
         cd tools/mfg_tool
         export PV=$(curl https://test.pypi.org/pypi/esp-matter-mfg-tool/json 2>/dev/null | jq -r '.info.version')
         export CV=$(python setup.py --version 2>/dev/null)
-        UPLOAD=(python3 -c 'from packaging import version; import os; print(version.parse(os.environ["PV"]) < version.parse(os.environ["CV"]))')
+        UPLOAD=$(python3 -c 'from packaging import version; import os; print(version.parse(os.environ["PV"]) < version.parse(os.environ["CV"]))')
         echo "SHALL_UPLOAD=$UPLOAD" >> $GITHUB_ENV
 
     - name: Install pypa/build
