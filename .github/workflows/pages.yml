@@ -43,7 +43,7 @@ jobs:
 
     runs-on: ubuntu-latest
     container:
-      image: espressif/esp-matter:latest
+      image: ghcr.io/shubhamdp/esp-matter:latest
     strategy:
       matrix:
         build-dir: ['examples/light', 'examples/light_switch']
@@ -79,7 +79,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     container:
-      image: espressif/esp-matter:latest
+      image: ghcr.io/shubhamdp/esp-matter:latest
 
     steps:
       - name: Download builds
