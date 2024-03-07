@@ -3407,5 +3407,27 @@ esp_err_t add(cluster_t *cluster)
 } /* feature */
 } /* keypad_input */
 
+namespace network_commissioning {
+namespace feature {
+
+namespace wifi_network_interface {
+uint32_t get_id() { return 1 << 0; }
+} // namespace wifi_network_interface
+
+namespace thread_network_interface {
+uint32_t get_id() { return 1 << 1; }
+} // namespace thread_network_interface
+
+namespace ethernet_network_interface {
+uint32_t get_id() { return 1 << 2; }
+} // namespace network_interace
+
+namespace per_device_credentials {
+uint32_t get_id() { return 1 << 3; }
+} // namespace per_device_credentials
+
+} // namespace feature
+} // namespace network_commissioning
+
 } /* cluster */
 } /* esp_matter */

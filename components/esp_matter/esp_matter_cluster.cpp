@@ -467,7 +467,7 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         attribute::create_last_networking_status(cluster, nullable<uint8_t>());
         attribute::create_last_network_id(cluster, NULL, 0);
         attribute::create_last_connect_error_value(cluster, nullable<int32_t>());
-        global::attribute::create_feature_map(cluster, 0);
+        global::attribute::create_feature_map(cluster, config->feature_map);
 #if CHIP_CONFIG_ENABLE_EVENTLIST_ATTRIBUTE
         global::attribute::create_event_list(cluster, NULL, 0, 0);
 #endif

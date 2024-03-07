@@ -203,6 +203,36 @@ typedef struct _node {
     uint16_t min_unused_endpoint_id;
 } _node_t;
 
+namespace {
+
+inline uint32_t get_network_commissioning_feature_map()
+{
+    endpoint_t *ep = endpoint::get(node::get(), 0);
+    cluster_t *cluster = cluster::get(ep, chip::app::Clusters::NetworkCommissioning::Id);
+    _attribute_t *attribute = (_attribute_t *)(attribute::get(cluster, chip::app::Clusters::Globals::Attributes::FeatureMap::Id));
+    return attribute->val.val.u32;
+}
+
+inline bool is_network_wifi()
+{
+    using namespace cluster::network_commissioning::feature;
+    return get_network_commissioning_feature_map() & wifi_network_interface::get_id();
+}
+
+inline bool is_network_thread()
+{
+    using namespace cluster::network_commissioning::feature;
+    return get_network_commissioning_feature_map() & thread_network_interface::get_id();
+}
+
+inline bool is_network_ethernet()
+{
+    using namespace cluster::network_commissioning::feature;
+    return get_network_commissioning_feature_map() & ethernet_network_interface::get_id();
+}
+
+} // anonymous namespae 
+
 namespace node {
 
 static _node_t *node = NULL;
@@ -903,10 +933,12 @@ static void esp_matter_chip_init_task(intptr_t context)
     chip::Server::GetInstance().Init(initParams);
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-    // If Thread is Provisioned, publish the dns service
-    if (chip::DeviceLayer::ConnectivityMgr().IsThreadProvisioned() &&
-        (chip::Server::GetInstance().GetFabricTable().FabricCount() != 0)) {
-        chip::app::DnssdServer::Instance().StartServer();
+    if (is_network_thread()) {
+        // If Thread is Provisioned, publish the dns service
+        if (chip::DeviceLayer::ConnectivityMgr().IsThreadProvisioned() &&
+            (chip::Server::GetInstance().GetFabricTable().FabricCount() != 0)) {
+            chip::app::DnssdServer::Instance().StartServer();
+        }
     }
 #endif
     if (endpoint::enable_all() != ESP_OK) {
@@ -921,7 +953,9 @@ static void esp_matter_chip_init_task(intptr_t context)
     if (GetDiagnosticDataProvider().GetBootReason(bootReason) == CHIP_NO_ERROR) {
         chip::app::Clusters::GeneralDiagnosticsServer::Instance().OnDeviceReboot(bootReason);
     }
+
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
+    if (is_network_wifi())
     {
         static chip::app::Clusters::NetworkCommissioning::Instance sWiFiNetworkCommissioningInstance(0,
                                             &(chip::DeviceLayer::NetworkCommissioning::ESPWiFiDriver::GetInstance()));
@@ -929,6 +963,7 @@ static void esp_matter_chip_init_task(intptr_t context)
     }
 #endif
 #if CHIP_DEVICE_CONFIG_ENABLE_ETHERNET
+    if (is_network_ethernet())
     {
         static chip::app::Clusters::NetworkCommissioning::Instance sEthernetNetworkCommissioningInstance(0,
                                             &(chip::DeviceLayer::NetworkCommissioning::ESPEthernetDriver::GetInstance()));
@@ -996,30 +1031,33 @@ static esp_err_t chip_init(event_callback_t callback, intptr_t callback_arg)
        PlatformMgr().AddEventHandler(callback, callback_arg);
     }
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-    if (ThreadStackMgr().InitThreadStack() != CHIP_NO_ERROR) {
-        ESP_LOGE(TAG, "Failed to initialize Thread stack");
-        return ESP_FAIL;
-    }
+    if (is_network_thread())
+    {
+        if (ThreadStackMgr().InitThreadStack() != CHIP_NO_ERROR) {
+            ESP_LOGE(TAG, "Failed to initialize Thread stack");
+            return ESP_FAIL;
+        }
 #if CHIP_CONFIG_ENABLE_ICD_SERVER
-    if (ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_SleepyEndDevice) != CHIP_NO_ERROR) {
-        ESP_LOGE(TAG, "Failed to set the Thread device type");
-        return ESP_FAIL;
-    }
+        if (ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_SleepyEndDevice) != CHIP_NO_ERROR) {
+            ESP_LOGE(TAG, "Failed to set the Thread device type");
+            return ESP_FAIL;
+        }
 
 #elif CHIP_DEVICE_CONFIG_THREAD_FTD
-    if (ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_Router) != CHIP_NO_ERROR) {
-        ESP_LOGE(TAG, "Failed to set the Thread device type");
-        return ESP_FAIL;
-    }
+        if (ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_Router) != CHIP_NO_ERROR) {
+            ESP_LOGE(TAG, "Failed to set the Thread device type");
+            return ESP_FAIL;
+        }
 #else
-    if (ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_MinimalEndDevice) != CHIP_NO_ERROR) {
-        ESP_LOGE(TAG, "Failed to set the Thread device type");
-        return ESP_FAIL;
-    }
+        if (ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_MinimalEndDevice) != CHIP_NO_ERROR) {
+            ESP_LOGE(TAG, "Failed to set the Thread device type");
+            return ESP_FAIL;
+        }
 #endif
-    if (ThreadStackMgr().StartThreadTask() != CHIP_NO_ERROR) {
-        ESP_LOGE(TAG, "Failed to launch Thread task");
-        return ESP_FAIL;
+        if (ThreadStackMgr().StartThreadTask() != CHIP_NO_ERROR) {
+            ESP_LOGE(TAG, "Failed to launch Thread task");
+            return ESP_FAIL;
+        }
     }
 #endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
 
@@ -1045,12 +1083,16 @@ esp_err_t start(event_callback_t callback, intptr_t callback_arg)
         ESP_LOGE(TAG, "Error create default event loop");
         return err;
     }
+
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
-    if (chip::DeviceLayer::Internal::ESP32Utils::InitWiFiStack() != CHIP_NO_ERROR) {
-        ESP_LOGE(TAG, "Error initializing Wi-Fi stack");
-        return ESP_FAIL;
+    if (is_network_wifi()) {
+        if (chip::DeviceLayer::Internal::ESP32Utils::InitWiFiStack() != CHIP_NO_ERROR) {
+            ESP_LOGE(TAG, "Error initializing Wi-Fi stack");
+            return ESP_FAIL;
+        }
     }
 #endif
+
     esp_matter_ota_requestor_init();
 
     err = chip_init(callback, callback_arg);

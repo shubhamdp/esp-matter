@@ -120,6 +120,7 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags);
 namespace network_commissioning {
 typedef struct config {
     uint16_t cluster_revision;
+    uint32_t feature_map;
     config() : cluster_revision(1) {}
 } config_t;
 

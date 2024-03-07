@@ -62,12 +62,23 @@ esp_err_t add(endpoint_t *endpoint, config_t *config)
     operational_credentials::create(endpoint, &(config->operational_credentials), CLUSTER_FLAG_SERVER);
     group_key_management::create(endpoint, CLUSTER_FLAG_SERVER);
 
+    using namespace network_commissioning::feature;
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
-    diagnostics_network_wifi::create(endpoint, &(config->diagnostics_network_wifi), CLUSTER_FLAG_SERVER);
-#endif
+    if (config->network_commissioning.feature_map & wifi_network_interface::get_id()) {
+        diagnostics_network_wifi::create(endpoint, &(config->diagnostics_network_wifi), CLUSTER_FLAG_SERVER);
+    }
+#endif // CHIP_DEVICE_CONFIG_ENABLE_WIFI
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-    diagnostics_network_thread::create(endpoint, &(config->diagnostics_network_thread), CLUSTER_FLAG_SERVER);
-#endif
+    if (config->network_commissioning.feature_map & thread_network_interface::get_id()) {
+        diagnostics_network_thread::create(endpoint, &(config->diagnostics_network_thread), CLUSTER_FLAG_SERVER);
+    }
+#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
+#if CHIP_DEVICE_CONFIG_ENABLE_ETHERNET
+    if (config->network_commissioning.feature_map & ethernet_network_interface::get_id()) {
+        diagnostics_network_ethernet::create(endpoint, &(config->diagnostics_network_thread), CLUSTER_FLAG_SERVER);
+    }
+#endif // CHIP_DEVICE_CONFIG_ENABLE_ETHERNET
+
 #if CHIP_CONFIG_ENABLE_ICD_SERVER
     icd_management::create(endpoint, &(config->icd_management), CLUSTER_FLAG_SERVER,
                            icd_management::feature::check_in_protocol_support::get_id());
