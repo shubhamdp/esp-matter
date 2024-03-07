@@ -24,6 +24,9 @@
 #include <app/server/CommissioningWindowManager.h>
 #include <app/server/Server.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
 static const char *TAG = "app_main";
 uint16_t light_endpoint_id = 0;
 
@@ -143,12 +146,77 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type, uint16
     return err;
 }
 
+enum network_features {
+    WIFI = 0,
+    THREAD,
+};
+
+SemaphoreHandle_t semaphoreHandle = NULL;
+
+static char mtr_netif_buf[16];
+static char *get_mtr_netif_from_nvs()
+{
+    size_t size = sizeof mtr_netif_buf;
+    nvs_handle_t out_handle;
+
+    nvs_open_from_partition("nvs", "chip-config", NVS_READWRITE, &out_handle);
+    esp_err_t err = nvs_get_str(out_handle, "mtr-net-if", mtr_netif_buf, &size);
+    nvs_close(out_handle);
+
+    if (ESP_OK == err)
+    {
+        return mtr_netif_buf;
+    }
+    return NULL;
+}
+
+static uint32_t get_feature_flag_from_str(const char *str)
+{
+    if (0 == strcmp(str, "wifi"))
+    {
+        return 1 << WIFI;
+    }
+    if (0 == strcmp(str, "thread"))
+    {
+        return 1 << THREAD;
+    }
+    return 0;
+}
+
+namespace example {
+namespace console {
+void init();
+void deinit();
+} // console
+} // example
+
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
 
     /* Initialize the ESP NVS layer */
     nvs_flash_init();
+
+    if (NULL == get_mtr_netif_from_nvs())
+    {
+        ESP_LOGE(TAG, "Matter network interface is not configure");
+
+        semaphoreHandle = xSemaphoreCreateBinary();
+        ABORT_APP_ON_FAILURE(semaphoreHandle != nullptr, ESP_LOGE(TAG, "Failed to create semaphore"));
+
+        ESP_LOGI(TAG, "\r\n\r\nEnter command: \"matter-network-iface [wifi|thread]\" to start");
+
+        example::console::init();
+
+        xSemaphoreTake(semaphoreHandle, portMAX_DELAY);
+        vSemaphoreDelete(semaphoreHandle);
+        semaphoreHandle = NULL;
+
+        example::console::deinit();
+    }
+
+    const char *mtr_network_iface = get_mtr_netif_from_nvs();
+    ESP_LOGE(TAG, "Starting matter network interface on %s", mtr_network_iface);
 
     /* Initialize driver */
     app_driver_handle_t light_handle = app_driver_light_init();
@@ -157,6 +225,7 @@ extern "C" void app_main()
 
     /* Create a Matter node and add the mandatory Root Node device type on endpoint 0 */
     node::config_t node_config;
+    node_config.root_node.network_commissioning.feature_map = get_feature_flag_from_str(mtr_network_iface);
 
     // node handle can be used to add/modify other endpoints.
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);

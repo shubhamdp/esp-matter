@@ -19,6 +19,7 @@
 #include <helpers.h>
 #include <device_types.h>
 #include <string.h>
+#include <nvs_flash.h>
 
 using namespace esp_matter;
 
@@ -392,6 +393,12 @@ namespace console {
      struct arg_str *device_type;
      struct arg_end *end;
  } create_device_args;
+
+/** Arguments used by 'network' function */
+static struct {
+    struct arg_str *network;
+    struct arg_end *end;
+} network_if_args;
  
 static int create(int argc, char **argv)
 {
@@ -434,6 +441,55 @@ esp_err_t register_create_device_commands()
     
 }
 
+static int handle_network_if(int argc, char **argv)
+{
+    int nerrors = arg_parse(argc, argv, (void **) &network_if_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, network_if_args.end, argv[0]);
+        ESP_LOGI(TAG, "Please use: matter-network-iface [wifi|thread]");
+        return 1;
+    }
+
+    std::string str = network_if_args.network->sval[0];
+    if (0 == strcmp(str.c_str(), "wifi") || 0 == strcmp(str.c_str(), "thread"))
+    {
+        ESP_LOGE(TAG, "Starting Network with Choice -- %s", str.c_str());
+
+        nvs_handle_t out_handle;
+        nvs_open_from_partition("nvs", "chip-config", NVS_READWRITE, &out_handle);
+        nvs_set_str(out_handle, "mtr-net-if", str.c_str());
+        nvs_commit(out_handle);
+        nvs_close(out_handle);
+
+        if(semaphoreHandle) {
+            xSemaphoreGive(semaphoreHandle);
+        }
+
+        return 0;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Invalid choice, please use either [wifi | thread]");
+        return 1;
+    }
+}
+
+esp_err_t register_network_if_commands()
+{
+    network_if_args.network = arg_str0(NULL, NULL, "<iface>", "[wifi | thread]");
+    network_if_args.end = arg_end(1);
+
+    const esp_console_cmd_t network_if_cmd = {
+        .command = "matter-network-iface",
+        .help = "Select matter network interface",
+        .hint = NULL,
+        .func = &handle_network_if,
+        .argtable = &network_if_args
+    };
+
+    return esp_console_cmd_register(&network_if_cmd);
+}
+
 void init(void)
 {    
 #if CONFIG_STORE_HISTORY
@@ -443,7 +499,7 @@ void init(void)
 
     initialize_console();
 
-    register_create_device_commands();
+    register_network_if_commands();
 
     /* Prompt to be printed before each line.
      * This can be customized, made dynamic, etc.
