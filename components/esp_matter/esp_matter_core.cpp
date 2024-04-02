@@ -855,7 +855,7 @@ esp_err_t chip_stack_unlock()
 }
 } /* lock */
 
-static void deinit_ble_if_commissioned(void)
+static void deinit_ble_if_commissioned(intptr_t unused)
 {
 #if CONFIG_BT_ENABLED && CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING
         if(chip::Server::GetInstance().GetFabricTable().FabricCount() > 0) {
@@ -937,7 +937,7 @@ static void esp_matter_chip_init_task(intptr_t context)
         sEthernetNetworkCommissioningInstance.Init();
     }
 #endif
-    deinit_ble_if_commissioned();
+    PlatformMgr().ScheduleWork(deinit_ble_if_commissioned, reinterpret_cast<intptr_t>(nullptr));
     xTaskNotifyGive(task_to_notify);
 }
 
@@ -966,7 +966,7 @@ static void device_callback_internal(const ChipDeviceEvent * event, intptr_t arg
 
     case chip::DeviceLayer::DeviceEventType::kCHIPoBLEConnectionClosed:
         ESP_LOGI(TAG, "BLE Disconnected");
-        deinit_ble_if_commissioned();
+        PlatformMgr().ScheduleWork(deinit_ble_if_commissioned, reinterpret_cast<intptr_t>(nullptr));
         break;
     default:
         break;
@@ -985,8 +985,6 @@ static esp_err_t chip_init(event_callback_t callback, intptr_t callback_arg)
     }
 
     setup_providers();
-    ConnectivityMgr().SetBLEAdvertisingEnabled(true);
-    // ConnectivityMgr().SetWiFiAPMode(ConnectivityManager::kWiFiAPMode_Enabled);
     if (PlatformMgr().StartEventLoopTask() != CHIP_NO_ERROR) {
         chip::Platform::MemoryShutdown();
         ESP_LOGE(TAG, "Failed to launch Matter main task");
