@@ -46,7 +46,7 @@ jobs:
       image: espressif/esp-matter:latest
     strategy:
       matrix:
-        build-dir: ['examples/light', 'examples/light_switch']
+        build-dir: ['light', 'light_switch']
         targets: ['esp32', 'esp32c3', 'esp32c6', 'esp32h2']
 
     steps:
@@ -55,7 +55,7 @@ jobs:
         run: |
           . $IDF_PATH/export.sh
           . $ESP_MATTER_PATH/export.sh
-          cd $ESP_MATTER_PATH/${{matrix.build-dir}}
+          cd $ESP_MATTER_PATH/examples/${{matrix.build-dir}}
           idf.py set-target ${{matrix.targets}} build
           cd build
           TARGET_CHIP=`cat project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
@@ -63,9 +63,9 @@ jobs:
           esptool.py --chip $TARGET_CHIP merge_bin -o "$GITHUB_WORKSPACE/images/$TARGET_CHIP"_"$APP_BIN" `cat flash_args | tr '\n' '\ '`
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: build-images
+          name: build-images-${{ matrix.build-dir }}-${{ matrix.targets }}
           path: images/
 
   deploy:
@@ -83,25 +83,27 @@ jobs:
 
     steps:
       - name: Download builds
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: build-images
+          pattern: build-images-*
           path: images/
+          merge-multiple: true
 
       - name: generate launchpad config
         run: |
           cd images/
           ls
+          # build the launchpad config
           $ESP_MATTER_PATH/tools/launchpad/generate_launchpad_config.sh
 
       - name: Setup Pages
-        uses: actions/configure-pages@v2
+        uses: actions/configure-pages@v4
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: images/
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
