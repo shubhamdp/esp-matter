@@ -1,4 +1,7 @@
-ARG VERSION=latest
+# chip-build image is moved to ubuntu 24.04 for Matter v1.4 onwards and
+# for matter v1.3 and earlier is uses 22.04 so pinning this to version:54
+# for building docker images
+ARG VERSION=54
 FROM ghcr.io/project-chip/chip-build:${VERSION} as build
 
 # Use IDF_CHECKOUT_REF to specify a tag, a branch or a specific commit ID.
