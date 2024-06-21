@@ -1,6 +1,7 @@
-# chip-build image is moved to ubuntu 24.04 for Matter v1.4 onwards and
-# for matter v1.3 and earlier is uses 22.04 so pinning this to version:54
-# for building docker images
+# The chip-build image is moved to Ubuntu 24.04 for Matter v1.4 onwards.
+# For Matter v1.3 and earlier, it uses Ubuntu 22.04.
+# Therefore, pinning this to version:54 for building Docker images.
+# TODO: Move to latest when updating submodule
 ARG VERSION=54
 FROM ghcr.io/project-chip/chip-build:${VERSION} as build
 
