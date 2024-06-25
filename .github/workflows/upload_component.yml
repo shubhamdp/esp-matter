@@ -6,6 +6,7 @@ on:
       - main
       - release/*
 
+
 jobs:
   upload_components:
     # Disable the job in forks
