@@ -62,10 +62,13 @@ jobs:
           . $ESP_MATTER_PATH/export.sh
           cd $ESP_MATTER_PATH/examples/${{ matrix.targets.example }}
 
-          if [ "${{ matrix.targets.sdkconfig }}" != "" ]; then
+          if [ "${{ matrix.targets.sdkconfig }}" != "" ]
+          then
             idf.py -D SDKCONFIG_DEFAULTS="${{ matrix.targets.sdkconfig }}" set-target ${{ matrix.targets.target }} build
-          else;
+            echo "idf.py -D SDKCONFIG_DEFAULTS="${{ matrix.targets.sdkconfig }}" set-target ${{ matrix.targets.target }} build"
+          else
             idf.py set-target ${{ matrix.targets.target }} build
+            echo "idf.py set-target ${{ matrix.targets.target }} build"
           fi
 
           cd build
