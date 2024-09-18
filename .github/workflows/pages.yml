@@ -96,6 +96,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           name: build-images-${{ matrix.targets.target }}-${{ matrix.targets.prefix }}-${{ matrix.targets.example }}
           path: images/
 
@@ -148,6 +149,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           name: build-images-${{ matrix.targets.target }}-${{ matrix.targets.prefix }}-${{ matrix.targets.example }}
           path: images/
 
