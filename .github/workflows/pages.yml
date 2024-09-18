@@ -55,7 +55,7 @@ jobs:
           - {example: light_switch, target: esp32c3, prefix: wifi_matter}
 
     steps:
-      - run: mkdir -p images
+      - run: mkdir -p images && ls -l
       - name: build application
         run: |
           . $IDF_PATH/export.sh
@@ -85,6 +85,13 @@ jobs:
           echo "- esp-idf: [$idf_rev](https://github.com/espressif/esp-idf/tree/$idf_rev)" >> $GITHUB_WORKSPACE/images/.esp-idf
           echo "- esp-matter: [$mtr_rev](https://github.com/espressif/esp-matter/tree/$mtr_rev)" >> $GITHUB_WORKSPACE/images/.esp-matter
           echo "- connectedhomeip: [$chip_rev](https://github.com/project-chip/connectedhomeip/tree/$chip_rev)" >> $GITHUB_WORKSPACE/images/.chip
+
+          echo $GITHUB_WORKSPACE/images
+          ls -l $GITHUB_WORKSPACE/images/
+
+          cat $GITHUB_WORKSPACE/images/.esp-idf
+          cat $GITHUB_WORKSPACE/images/.esp-matter
+          cat $GITHUB_WORKSPACE/images/.chip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -171,6 +178,7 @@ jobs:
       - name: generate launchpad config
         run: |
           cd images/
+          ls -l .
           $ESP_MATTER_PATH/tools/launchpad/generate_launchpad_config.sh ${{ github.repository_owner }}
 
           # Put together the commit ids used when building the firmwares
