@@ -1,0 +1,45 @@
+name: Publish Python Package to PyPI
+
+on:
+  schedule:
+    # Runs weekly on Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the main Matter repository
+      - name: Checkout Matter repository
+        uses: actions/checkout@v3
+        with:
+          repository: shubhamdp/connectedhomeip
+          ref: py_setup_payload
+
+      # Step 2: Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools wheel twine
+
+      # Step 4: Build the package (wheel)
+      - name: Build wheel
+        run: |
+          cd src/setup_payload/python/
+          python3 -m build
+
+      # Step 5: Publish the package to PyPI
+      - name: Publish to test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
