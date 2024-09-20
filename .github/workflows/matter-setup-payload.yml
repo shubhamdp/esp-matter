@@ -8,36 +8,45 @@ on:
   workflow_dispatch: # Allows manual trigger
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the main Matter repository
       - name: Checkout Matter repository
         uses: actions/checkout@v3
         with:
           repository: shubhamdp/connectedhomeip
           ref: py_setup_payload
 
-      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools wheel twine build
+          python -m pip install --upgrade pip
+          pip install build
 
-      # Step 4: Build the package (wheel)
-      - name: Build wheel
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+      - name: Build package
         run: |
           cd src/setup_payload/python/
-          python3 -m build
-          # --skip-existing is only for testing 
-          twine check dist/* && twine upload dist/* --repository-url https://test.pypi.org/legacy/ --skip-existing
+          python -m build
+
+      # Step 5: Publish to TestPyPI
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          packages_dir: src/setup_payload/python/dist/
+          repository_url: https://test.pypi.org/legacy/
+          skip_existing: true
+
+      # Optional: Publish to PyPI (uncomment when ready for production)
+      # - name: Publish to PyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     user: __token__
+      #     password: ${{ secrets.PYPI_TOKEN }}
+      #     packages_dir: src/setup_payload/python/dist/
