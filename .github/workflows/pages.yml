@@ -39,7 +39,8 @@ concurrency:
 jobs:
   Build-Matter:
     # Disable the job in forks
-    if: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    if: false
+    # if: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
 
     runs-on: ubuntu-latest
     container:
@@ -58,40 +59,41 @@ jobs:
       - run: mkdir -p images && ls -l
       - name: build application
         run: |
-          . $IDF_PATH/export.sh
-          . $ESP_MATTER_PATH/export.sh
-          cd $ESP_MATTER_PATH/examples/${{ matrix.targets.example }}
+          # . $IDF_PATH/export.sh
+          # . $ESP_MATTER_PATH/export.sh
+          # cd $ESP_MATTER_PATH/examples/${{ matrix.targets.example }}
 
-          if [ "${{ matrix.targets.sdkconfig }}" != "" ]
-          then
-            idf.py -D SDKCONFIG_DEFAULTS="${{ matrix.targets.sdkconfig }}" set-target ${{ matrix.targets.target }} build
-            echo "idf.py -D SDKCONFIG_DEFAULTS="${{ matrix.targets.sdkconfig }}" set-target ${{ matrix.targets.target }} build"
-          else
-            idf.py set-target ${{ matrix.targets.target }} build
-            echo "idf.py set-target ${{ matrix.targets.target }} build"
-          fi
+          # if [ "${{ matrix.targets.sdkconfig }}" != "" ]
+          # then
+          #   idf.py -D SDKCONFIG_DEFAULTS="${{ matrix.targets.sdkconfig }}" set-target ${{ matrix.targets.target }} build
+          #   echo "idf.py -D SDKCONFIG_DEFAULTS="${{ matrix.targets.sdkconfig }}" set-target ${{ matrix.targets.target }} build"
+          # else
+          #   idf.py set-target ${{ matrix.targets.target }} build
+          #   echo "idf.py set-target ${{ matrix.targets.target }} build"
+          # fi
 
-          cd build
+          # cd build
 
-          TARGET_CHIP=`cat project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
-          APP_BIN=`cat project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
-          OUT_BIN="$GITHUB_WORKSPACE/images/$TARGET_CHIP"_${{ matrix.targets.prefix }}_"$APP_BIN"
-          esptool.py --chip $TARGET_CHIP merge_bin -o $OUT_BIN `cat flash_args | tr '\n' '\ '`
+          # TARGET_CHIP=`cat project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["target"])'`
+          # APP_BIN=`cat project_description.json | python3 -c 'import sys,json; print(json.load(sys.stdin)["app_bin"])'`
+          # OUT_BIN="$GITHUB_WORKSPACE/images/$TARGET_CHIP"_${{ matrix.targets.prefix }}_"$APP_BIN"
+          # esptool.py --chip $TARGET_CHIP merge_bin -o $OUT_BIN `cat flash_args | tr '\n' '\ '`
 
           # record the esp-idf and esp-matter commit
-          idf_rev=`git -C $IDF_PATH rev-parse --short HEAD`
-          mtr_rev=`git -C $ESP_MATTER_PATH rev-parse --short HEAD`
-          chip_rev=`git -C $ESP_MATTER_PATH/connectedhomeip/connectedhomeip rev-parse --short HEAD`
+          # idf_rev=`git -C $IDF_PATH rev-parse --short HEAD`
+          # mtr_rev=`git -C $ESP_MATTER_PATH rev-parse --short HEAD`
+          # chip_rev=`git -C $ESP_MATTER_PATH/connectedhomeip/connectedhomeip rev-parse --short HEAD`
           echo "- esp-idf: [$idf_rev](https://github.com/espressif/esp-idf/tree/$idf_rev)" >> $GITHUB_WORKSPACE/images/.esp-idf
           echo "- esp-matter: [$mtr_rev](https://github.com/espressif/esp-matter/tree/$mtr_rev)" >> $GITHUB_WORKSPACE/images/.esp-matter
           echo "- connectedhomeip: [$chip_rev](https://github.com/project-chip/connectedhomeip/tree/$chip_rev)" >> $GITHUB_WORKSPACE/images/.chip
 
+          # cat $GITHUB_WORKSPACE/images/.esp-idf
+          # cat $GITHUB_WORKSPACE/images/.esp-matter
+          # cat $GITHUB_WORKSPACE/images/.chip
+          touch $GITHUB_WORKSPACE/images/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}.bin
+          
           echo $GITHUB_WORKSPACE/images
           ls -l $GITHUB_WORKSPACE/images/
-
-          cat $GITHUB_WORKSPACE/images/.esp-idf
-          cat $GITHUB_WORKSPACE/images/.esp-matter
-          cat $GITHUB_WORKSPACE/images/.chip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
