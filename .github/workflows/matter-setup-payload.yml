@@ -39,4 +39,5 @@ jobs:
         run: |
           cd src/setup_payload/python/
           python3 -m build
-          twine check dist/* && twine upload dist/* --repository-url https://test.pypi.org/legacy/
+          # --skip-existing is only for testing 
+          twine check dist/* && twine upload dist/* --repository-url https://test.pypi.org/legacy/ --skip-existing
