@@ -33,14 +33,10 @@ jobs:
 
       # Step 4: Build the package (wheel)
       - name: Build wheel
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
         run: |
           cd src/setup_payload/python/
           python3 -m build
-
-      # Step 5: Publish the package to PyPI
-      - name: Publish to test PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.TEST_PYPI_TOKEN }}
-          repository-url: https://test.pypi.org/legacy/
-          packages-dir: src/setup_payload/python
+          twine check dist/* && twine upload dist/*
