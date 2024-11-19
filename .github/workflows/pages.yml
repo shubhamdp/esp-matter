@@ -39,7 +39,7 @@ concurrency:
 jobs:
   Build-Matter:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
 
     runs-on: ubuntu-latest
     container:
@@ -93,7 +93,8 @@ jobs:
 
   Build-Rainmaker:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    # if: ${{ github.repository_owner == 'espressif' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
 
     runs-on: ubuntu-latest
     container:
