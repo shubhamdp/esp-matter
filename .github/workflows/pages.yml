@@ -55,6 +55,7 @@ jobs:
           - {example: light_switch, target: esp32c3, prefix: wifi_matter}
 
     steps:
+      - run: cmake --version
       - run: mkdir -p images
       - name: build application
         run: |
