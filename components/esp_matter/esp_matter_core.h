@@ -152,6 +152,43 @@ node_t *get();
  */
 esp_err_t destroy();
 
+/**
+ * @brief Get the number of clusters on the node that match the given flags
+ *
+ *        This can be used to get the count of endpoints implementing a specific service/client cluster
+ *        eg: To get the server cluster count for Groups server cluster:
+ *            `get_cluster_count(0xFFFF, chip::app::Clusters::Groups::Id, CLUSTER_FLAG_SERVER);`
+ *
+ * @param endpoint_id: The endpoint ID to check, 0xFFFF is treated as wildcard endpoint id
+ * @param cluster_id: The cluster ID to check, 0xFFFF'FFFF is treated as wildcard cluster id
+ * @param cluster_flags: The flags to check
+ *
+ * @return The number of clusters that match the given flags
+ */
+uint32_t get_cluster_count(uint16_t endpoint_id, uint32_t cluster_id, uint8_t cluster_flags);
+
+/** Get the endpoint count for a server cluster
+ *
+ * Get the number of endpoints that have the given cluster ID as a server cluster.
+ *
+ * @param[in] cluster_id Cluster ID.
+ *
+ * @return Endpoint count on success.
+ * @return 0 in case of failure or if not found on any endpoint.
+ */
+
+uint32_t get_server_cluster_endpoint_count(uint32_t cluster_id);
+
+/** Get the endpoint count for a client cluster
+ *
+ * Get the number of endpoints that have the given cluster ID as a client cluster.
+ *
+ * @param[in] cluster_id Cluster ID.
+ *
+ * @return Endpoint count on success.
+ * @return 0 in case of failure or if not found on any endpoint.
+ */
+uint32_t get_client_cluster_endpoint_count(uint32_t cluster_id);
 } /* node */
 
 namespace endpoint {
