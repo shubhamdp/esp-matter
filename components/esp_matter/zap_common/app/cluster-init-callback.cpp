@@ -73,11 +73,26 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId)
     case app::Clusters::Chime::Id:
         emberAfChimeClusterInitCallback(endpoint);
         break;
+    case app::Clusters::ClosureControl::Id:
+        emberAfClosureControlClusterInitCallback(endpoint);
+        break;
+    case app::Clusters::ClosureDimension::Id:
+        emberAfClosureDimensionClusterInitCallback(endpoint);
+        break;
     case app::Clusters::ColorControl::Id:
         emberAfColorControlClusterInitCallback(endpoint);
         break;
     case app::Clusters::CommissionerControl::Id:
         emberAfCommissionerControlClusterInitCallback(endpoint);
+        break;
+    case app::Clusters::CommodityMetering::Id:
+        emberAfCommodityMeteringClusterInitCallback(endpoint);
+        break;
+    case app::Clusters::CommodityPrice::Id:
+        emberAfCommodityPriceClusterInitCallback(endpoint);
+        break;
+    case app::Clusters::CommodityTariff::Id:
+        emberAfCommodityTariffClusterInitCallback(endpoint);
         break;
     case app::Clusters::ContentAppObserver::Id:
         emberAfContentAppObserverClusterInitCallback(endpoint);
@@ -114,6 +129,9 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId)
         break;
     case app::Clusters::ElectricalEnergyMeasurement::Id:
         emberAfElectricalEnergyMeasurementClusterInitCallback(endpoint);
+        break;
+    case app::Clusters::ElectricalGridConditions::Id:
+        emberAfElectricalGridConditionsClusterInitCallback(endpoint);
         break;
     case app::Clusters::ElectricalPowerMeasurement::Id:
         emberAfElectricalPowerMeasurementClusterInitCallback(endpoint);
@@ -169,6 +187,12 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId)
     case app::Clusters::IlluminanceMeasurement::Id:
         emberAfIlluminanceMeasurementClusterInitCallback(endpoint);
         break;
+    case app::Clusters::JointFabricAdministrator::Id:
+        emberAfJointFabricAdministratorClusterInitCallback(endpoint);
+        break;
+    case app::Clusters::JointFabricDatastore::Id:
+        emberAfJointFabricDatastoreClusterInitCallback(endpoint);
+        break;
     case app::Clusters::KeypadInput::Id:
         emberAfKeypadInputClusterInitCallback(endpoint);
         break;
@@ -198,6 +222,9 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId)
         break;
     case app::Clusters::Messages::Id:
         emberAfMessagesClusterInitCallback(endpoint);
+        break;
+    case app::Clusters::MeterIdentification::Id:
+        emberAfMeterIdentificationClusterInitCallback(endpoint);
         break;
     case app::Clusters::MicrowaveOvenControl::Id:
         emberAfMicrowaveOvenControlClusterInitCallback(endpoint);
@@ -316,6 +343,9 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId)
     case app::Clusters::SoftwareDiagnostics::Id:
         emberAfSoftwareDiagnosticsClusterInitCallback(endpoint);
         break;
+    case app::Clusters::SoilMeasurement::Id:
+        emberAfSoilMeasurementClusterInitCallback(endpoint);
+        break;
     case app::Clusters::Switch::Id:
         emberAfSwitchClusterInitCallback(endpoint);
         break;
@@ -351,6 +381,9 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId)
         break;
     case app::Clusters::TlsCertificateManagement::Id:
         emberAfTlsCertificateManagementClusterInitCallback(endpoint);
+        break;
+    case app::Clusters::TlsClientManagement::Id:
+        emberAfTlsClientManagementClusterInitCallback(endpoint);
         break;
     case app::Clusters::TotalVolatileOrganicCompoundsConcentrationMeasurement::Id:
         emberAfTotalVolatileOrganicCompoundsConcentrationMeasurementClusterInitCallback(endpoint);

@@ -47,6 +47,7 @@ led_driver_handle_t led_driver_init(led_driver_config_t *config)
         .timer_sel = LEDC_TIMER_1,
         .duty = 0,
         .hpoint = 0,
+        .flags.output_invert = config->output_invert,
     };
     err = ledc_channel_config(&ledc_channel);
     if (err != ESP_OK) {
@@ -102,6 +103,11 @@ esp_err_t led_driver_set_saturation(led_driver_handle_t handle, uint8_t saturati
 }
 
 esp_err_t led_driver_set_temperature(led_driver_handle_t handle, uint32_t temperature)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t led_driver_set_xy(led_driver_handle_t handle, uint16_t x, uint16_t y)
 {
     return ESP_ERR_NOT_SUPPORTED;
 }

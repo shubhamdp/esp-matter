@@ -16,8 +16,11 @@
 
 #include <esp_matter.h>
 #include <esp_matter_console.h>
+#include "electrical_measurement/electrical_measurement.h"
 
 #include <common_macros.h>
+#include <log_heap_numbers.h>
+
 #include <app_priv.h>
 #include <app_reset.h>
 
@@ -34,6 +37,12 @@
 #include <esp_openthread_border_router.h>
 #include <esp_openthread_lock.h>
 #endif
+
+#include <lib/support/CHIPMem.h>
+#include <platform/CHIPDeviceLayer.h>
+
+// External variables for electrical sensor initialization
+extern bool g_electrical_sensor_created;
 
 static const char *TAG = "app_main";
 
@@ -59,6 +68,7 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningComplete:
         ESP_LOGI(TAG, "Commissioning complete");
+        MEMORY_PROFILER_DUMP_HEAP_STAT("commissioning complete");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFailSafeTimerExpired:
@@ -75,6 +85,7 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningWindowOpened:
         ESP_LOGI(TAG, "Commissioning window opened");
+        MEMORY_PROFILER_DUMP_HEAP_STAT("commissioning window opened");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningWindowClosed:
@@ -132,6 +143,11 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
         }
         break;
 
+    case chip::DeviceLayer::DeviceEventType::kBLEDeinitialized:
+        ESP_LOGI(TAG, "BLE deinitialized and memory reclaimed");
+        MEMORY_PROFILER_DUMP_HEAP_STAT("BLE deinitialized");
+        break;
+
     default:
         break;
     }
@@ -162,6 +178,16 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type, uint16
     return err;
 }
 
+// Handler function for scheduled electrical measurement work
+static void ElectricalMeasurementWorkHandler(intptr_t context)
+{
+    uint16_t endpoint_id = app_endpoint_id;
+    esp_err_t err = electrical_measurement_example(endpoint_id);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize electrical measurement clusters: %d", err);
+    }
+}
+
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
@@ -169,11 +195,15 @@ extern "C" void app_main()
     /* Initialize the ESP NVS layer */
     nvs_flash_init();
 
+    MEMORY_PROFILER_DUMP_HEAP_STAT("Bootup");
+
     /* Create a Matter node and add the mandatory Root Node device type on endpoint 0 */
     node::config_t node_config;
     // node handle can be used to add/modify other endpoints.
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
+
+    MEMORY_PROFILER_DUMP_HEAP_STAT("node created");
 
     uint8_t device_type_index;
     if (esp_matter::nvs_helpers::get_device_type_from_nvs(&device_type_index) != ESP_OK) {
@@ -207,11 +237,18 @@ extern "C" void app_main()
 #endif
 
     /* Matter start */
-     err = esp_matter::start(app_event_cb);
-     ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Failed to start Matter, err:%d", err));
-     if (err != ESP_OK) {
-         ESP_LOGE(TAG, "Matter start failed: %d", err);
-     }
+    err = esp_matter::start(app_event_cb);
+    ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Failed to start Matter, err:%d", err));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Matter start failed: %d", err);
+    }
+
+    MEMORY_PROFILER_DUMP_HEAP_STAT("matter started");
+    // Initialize electrical measurement clusters if electrical sensor was created
+    if (g_electrical_sensor_created) {
+        ESP_LOGI(TAG, "Initializing electrical measurement clusters for endpoint %d", app_endpoint_id);
+        chip::DeviceLayer::PlatformMgr().ScheduleWork(ElectricalMeasurementWorkHandler, reinterpret_cast<intptr_t>(nullptr));
+    }
 
 #if CONFIG_ENABLE_CHIP_SHELL
     esp_matter::console::diagnostics_register_commands();
@@ -223,4 +260,9 @@ extern "C" void app_main()
 #endif // CONFIG_OPENTHREAD_BORDER_ROUTER && CONFIG_OPENTHREAD_CLI
 
 #endif
+
+    while (true) {
+        MEMORY_PROFILER_DUMP_HEAP_STAT("Idle");
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+    }
 }

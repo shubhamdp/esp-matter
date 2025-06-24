@@ -99,7 +99,7 @@ The option ``-n`` (count) is the number of generated binaries. In the above comm
 
 The option ``--paa-trust-store-path`` should be added when using chip-tool to pair the device for manual tests.
 
-.. only:: esp32 or esp32s3 or esp32c3 or esp32c2 or esp32c6
+.. only:: esp32 or esp32s3 or esp32c3 or esp32c2 or esp32c6 or esp32c5
 
    ::
 
@@ -110,7 +110,7 @@ The option ``--paa-trust-store-path`` should be added when using chip-tool to pa
 
     or
 
-.. only:: esp32h2 or esp32c6
+.. only:: esp32h2 or esp32c6 or esp32c5
 
    ::
 
@@ -325,6 +325,12 @@ Here are some issues that you might meet in Matter Certification Test and quick 
   No response on step 7 is expected (`Related issue <https://github.com/CHIP-Specifications/chip-test-plans/issues/1947>`__).
 
   All the NetworkCommissioning commands are fail-safe required. If the commands fail with a ``FAILSAFE_REQUIRED`` status code. You need to send ``arm-fail-safe`` command and then send the NetworkCommissioning commands.
+
+  - ``TC-RR-1.1``
+
+  For more application endpoints with group cluster, need more nvs size to store group table, so if the ``TC-RR-1.1`` failed, can try to increase the nvs size. (`Related issue <https://github.com/project-chip/connectedhomeip/issues/32481>`__`)
+
+  Please note that the minimum NVS size required is 48 KB (0xC000) when using a single endpoint with a group cluster.
 
 .. _`esp-matter-mfg-tool`: https://github.com/espressif/esp-matter-tools/tree/main/mfg_tool
 .. _`chip-cert`: https://github.com/espressif/connectedhomeip/tree/master/src/tools/chip-cert/README.md

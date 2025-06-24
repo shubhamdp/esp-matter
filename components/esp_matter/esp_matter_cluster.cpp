@@ -141,7 +141,7 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     }
 
      /* Features */
-    if (config != NULL && config->features & feature::taglist::get_id()) {
+    if (config && config->feature_flags & feature::taglist::get_id()) {
         feature::taglist::add(cluster);
     }
 
@@ -159,6 +159,10 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     VerifyOrReturnValue(cluster, NULL, ESP_LOGE(TAG, "Could not create cluster. cluster_id: 0x%08" PRIX32, Actions::Id));
 
     if (flags & CLUSTER_FLAG_SERVER) {
+        if (config -> delegate != nullptr) {
+            static const auto delegate_init_cb = ActionsDelegateInitCB;
+            set_delegate_and_init_callback(cluster, delegate_init_cb, config->delegate);
+        }
         set_plugin_server_init_callback(cluster, NULL);
         add_function_list(cluster, function_list, function_flags);
 
@@ -206,6 +210,16 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     }
 
     event::create_access_control_entry_changed(cluster);
+
+    /* Features */
+    if (config) {
+        if (config->feature_flags & feature::extension::get_id()) {
+            feature::extension::add(cluster);
+        }
+        if (config->feature_flags & feature::managed_device::get_id()) {
+            feature::managed_device::add(cluster);
+        }
+    }
 
     return cluster;
 }
@@ -298,6 +312,10 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     VerifyOrReturnValue(cluster, NULL, ESP_LOGE(TAG, "Could not create cluster. cluster_id: 0x%08" PRIX32, OtaSoftwareUpdateProvider::Id));
 
     if (flags & CLUSTER_FLAG_SERVER) {
+        if (config -> delegate != nullptr) {
+            static const auto delegate_init_cb = OtaProviderDelegateInitCB;
+            set_delegate_and_init_callback(cluster, delegate_init_cb, config->delegate);
+        }
         static const auto plugin_server_init_cb = CALL_ONCE(MatterOtaSoftwareUpdateProviderPluginServerInitCallback);
         set_plugin_server_init_callback(cluster, plugin_server_init_cb);
         add_function_list(cluster, function_list, function_flags);
@@ -308,6 +326,13 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         /* Attributes not managed internally */
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
+
+    /* Commands */
+    command::create_query_image(cluster);
+    command::create_query_image_response(cluster);
+    command::create_apply_update_request(cluster);
+    command::create_apply_update_response(cluster);
+    command::create_notify_update_applied(cluster);
 
     return cluster;
 }
@@ -347,6 +372,9 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     event::create_state_transition(cluster);
     event::create_version_applied(cluster);
 
+    /* Commands */
+    command::create_announce_ota_provider(cluster);
+
     return cluster;
 }
 } /* ota_requestor */
@@ -380,6 +408,11 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         } else {
             ESP_LOGE(TAG, "Config is NULL. Cannot add some attributes.");
         }
+    }
+
+    /* Features */
+    if (config && config->feature_flags & feature::terms_and_conditions::get_id()) {
+        feature::terms_and_conditions::add(cluster, &(config->features.terms_and_conditions));
     }
 
     return cluster;
@@ -494,8 +527,8 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
-     /* Features */
-    if (features & feature::basic::get_id()) {
+    /* Features */
+    if (config && config->feature_flags & feature::basic::get_id()) {
         feature::basic::add(cluster);
     }
 
@@ -563,7 +596,7 @@ cluster_t *create(endpoint_t *endpoint, uint8_t flags)
 }
 } /* group_key_management */
 
-namespace wifi_network_diagnotics {
+namespace wifi_network_diagnostics {
 const function_generic_t *function_list = NULL;
 const int function_flags = CLUSTER_FLAG_NONE;
 
@@ -590,9 +623,19 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
+    /* Features */
+    if (config) {
+        if (config->feature_flags & feature::packet_counts::get_id()) {
+            feature::packet_counts::add(cluster);
+        }
+        if (config->feature_flags & feature::error_counts::get_id()) {
+            feature::error_counts::add(cluster);
+        }
+    }
+
     return cluster;
 }
-} /* wifi_network_diagnotics */
+} /* wifi_network_diagnostics */
 
 namespace thread_network_diagnostics {
 const function_generic_t *function_list = NULL;
@@ -658,6 +701,16 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
+    /* Features */
+    if (config) {
+        if (config->feature_flags & feature::packet_counts::get_id()) {
+            feature::packet_counts::add(cluster, &(config->features.packet_counts));
+        }
+        if (config->feature_flags & feature::error_counts::get_id()) {
+            feature::error_counts::add(cluster, &(config->features.error_counts));
+        }
+    }
+
     return cluster;
 }
 } /* ethernet_network_diagnostics */
@@ -695,6 +748,20 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 
     event::create_time_failure(cluster);
 
+    if(config) {
+        if(config->feature_flags & feature::time_zone::get_id()) {
+            feature::time_zone::add(cluster, &(config->features.time_zone));
+        }
+        if(config->feature_flags & feature::ntp_client::get_id()) {
+            feature::ntp_client::add(cluster, &(config->features.ntp_client));
+        }
+        if(config->feature_flags & feature::ntp_server::get_id()) {
+            feature::ntp_server::add(cluster, &(config->features.ntp_server));
+        }
+        if(config->feature_flags & feature::time_sync_client::get_id()) {
+            feature::time_sync_client::add(cluster);
+        }
+    }
     return cluster;
 }
 } /* time_synchronization */
@@ -719,8 +786,8 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if (features & feature::temperature_unit::get_id()) {
-        feature::temperature_unit::add(cluster, &(config->temperature_unit));
+    if (config && config->feature_flags & feature::temperature_unit::get_id()) {
+        feature::temperature_unit::add(cluster, &(config->features.temperature_unit));
     }
 
     return cluster;
@@ -756,6 +823,11 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 
     event::create_reachable_changed(cluster);
 
+    /* Features */
+    if (config && config->feature_flags & feature::bridged_icd_support::get_id()) {
+        feature::bridged_icd_support::add(cluster);
+    }
+
     return cluster;
 }
 } /* bridged_device_basic_information */
@@ -789,20 +861,22 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if (features & feature::wired::get_id()) {
-        feature::wired::add(cluster, &(config->wired));
-    }
+    if(config) {
+        if (config->feature_flags & feature::wired::get_id()) {
+            feature::wired::add(cluster, &(config->features.wired));
+        }
 
-    if (features & feature::battery::get_id()) {
-        feature::battery::add(cluster, &(config->battery));
-    }
+        if (config->feature_flags & feature::battery::get_id()) {
+            feature::battery::add(cluster, &(config->features.battery));
+        }
 
-    if (features & feature::rechargeable::get_id()) {
-        feature::rechargeable::add(cluster, &(config->rechargeable));
-    }
+        if (config->feature_flags & feature::rechargeable::get_id()) {
+            feature::rechargeable::add(cluster, &(config->features.rechargeable));
+        }
 
-    if (features & feature::replaceable::get_id()) {
-        feature::replaceable::add(cluster, &(config->replaceable));
+        if (config->feature_flags & feature::replaceable::get_id()) {
+            feature::replaceable::add(cluster, &(config->features.replaceable));
+        }
     }
 
     return cluster;
@@ -834,13 +908,15 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
 #if defined(CHIP_CONFIG_ENABLE_ICD_CIP) && CHIP_CONFIG_ENABLE_ICD_CIP
-    if (features & feature::long_idle_time_support::get_id()) {
-        feature::long_idle_time_support::add(cluster);
-        if (features & feature::user_active_mode_trigger::get_id()) {
-            feature::user_active_mode_trigger::add(cluster, &config->user_active_mode_trigger);
-        }
-        if (features & feature::check_in_protocol_support::get_id()) {
-            feature::check_in_protocol_support::add(cluster);
+    if(config) {
+        if (config->feature_flags & feature::long_idle_time_support::get_id()) {
+            feature::long_idle_time_support::add(cluster);
+            if (config->feature_flags & feature::user_active_mode_trigger::get_id()) {
+                feature::user_active_mode_trigger::add(cluster, &config->features.user_active_mode_trigger);
+            }
+            if (config->feature_flags & feature::check_in_protocol_support::get_id()) {
+                feature::check_in_protocol_support::add(cluster);
+            }
         }
     }
 #endif // defined(CHIP_CONFIG_ENABLE_ICD_CIP) && CHIP_CONFIG_ENABLE_ICD_CIP
@@ -935,9 +1011,8 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         }
     }
 
-    /* Extra initialization */
-    uint16_t endpoint_id = endpoint::get_id(endpoint);
-    identification::init(endpoint_id, config->identify_type);
+    /* Commands */
+    command::create_identify(cluster);
 
     return cluster;
 }
@@ -948,9 +1023,6 @@ const function_generic_t function_list[] = {
     (function_generic_t)emberAfGroupsClusterServerInitCallback,
 };
 const int function_flags = CLUSTER_FLAG_INIT_FUNCTION;
-
-static uint8_t server_cluster_count = 0;
-uint8_t get_server_cluster_count() { return server_cluster_count; }
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
@@ -972,9 +1044,19 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         } else {
             ESP_LOGE(TAG, "Config is NULL. Cannot add some attributes.");
         }
-
-        server_cluster_count++;
     }
+
+    /* Commands */
+    command::create_add_group(cluster);
+    command::create_view_group(cluster);
+    command::create_get_group_membership(cluster);
+    command::create_remove_group(cluster);
+    command::create_remove_all_groups(cluster);
+    command::create_add_group_if_identifying(cluster);
+    command::create_add_group_response(cluster);
+    command::create_view_group_response(cluster);
+    command::create_get_group_membership_response(cluster);
+    command::create_remove_group_response(cluster);
 
     return cluster;
 }
@@ -1008,6 +1090,37 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
             attribute::create_fabric_scene_info(cluster, NULL, 0, 0);
         } else {
             ESP_LOGE(TAG, "Config is NULL. Cannot add some attributes.");
+        }
+    }
+
+    /* Commands */
+    command::create_add_scene(cluster);
+    command::create_view_scene(cluster);
+    command::create_remove_scene(cluster);
+    command::create_remove_all_scenes(cluster);
+    command::create_store_scene(cluster);
+    command::create_recall_scene(cluster);
+    command::create_get_scene_membership(cluster);
+    command::create_add_scene_response(cluster);
+    command::create_view_scene_response(cluster);
+    command::create_remove_scene_response(cluster);
+    command::create_remove_all_scenes_response(cluster);
+    command::create_store_scene_response(cluster);
+    command::create_get_scene_membership_response(cluster);
+
+    /* Features */
+    if(config) {
+        if (config->feature_flags & feature::scene_names::get_id()) {
+            feature::scene_names::add(cluster);
+        }
+        if (config->feature_flags & feature::explicit_feature::get_id()) {
+            feature::explicit_feature::add(cluster);
+        }
+        if (config->feature_flags & feature::table_size::get_id()) {
+            feature::table_size::add(cluster);
+        }
+        if (config->feature_flags & feature::fabric_scenes::get_id()) {
+            feature::fabric_scenes::add(cluster);
         }
     }
 
@@ -1045,23 +1158,26 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         }
     }
 
-    /* Features */
-    if (features & feature::off_only::get_id()) {
-        feature::off_only::add(cluster);
-    }
-    else {
-        if (features & feature::lighting::get_id()) {
-            feature::lighting::add(cluster, &(config->lighting));
-        }
-        if (features & feature::dead_front_behavior::get_id()) {
-            feature::dead_front_behavior::add(cluster);
-        }
-    }
-
     /* Commands */
-    if (!(features & feature::off_only::get_id())) {
-        command::create_on(cluster);
-        command::create_toggle(cluster);
+    command::create_off(cluster);
+
+    /* Features */
+    if (config) {
+        if (config->feature_flags & feature::off_only::get_id()) {
+            feature::off_only::add(cluster);
+        }
+        else {
+            if (config->feature_flags & feature::lighting::get_id()) {
+                feature::lighting::add(cluster, &(config->features.lighting));
+            }
+            if (config->feature_flags & feature::dead_front_behavior::get_id()) {
+                feature::dead_front_behavior::add(cluster);
+            }
+        }
+        if (!(config->feature_flags & feature::off_only::get_id())) {
+            command::create_on(cluster);
+            command::create_toggle(cluster);
+        }
     }
 
     return cluster;
@@ -1100,12 +1216,27 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         }
     }
 
+    /* Commands */
+    command::create_move_to_level(cluster);
+    command::create_move(cluster);
+    command::create_step(cluster);
+    command::create_stop(cluster);
+    command::create_move_to_level_with_on_off(cluster);
+    command::create_move_with_on_off(cluster);
+    command::create_step_with_on_off(cluster);
+    command::create_stop_with_on_off(cluster);
+
     /* Features */
-    if (features & feature::on_off::get_id()) {
-        feature::on_off::add(cluster);
-    }
-    if (features & feature::lighting::get_id()) {
-        feature::lighting::add(cluster, &(config->lighting));
+    if (config) {
+        if (config->feature_flags & feature::on_off::get_id()) {
+            feature::on_off::add(cluster);
+        }
+        if (config->feature_flags & feature::lighting::get_id()) {
+            feature::lighting::add(cluster, &(config->features.lighting));
+        }
+        if (config->feature_flags & feature::frequency::get_id()) {
+            feature::frequency::add(cluster, &(config->features.frequency));
+        }
     }
 
     return cluster;
@@ -1155,25 +1286,27 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Commands */
-    if (features & feature::hue_saturation::get_id() || features & feature::color_temperature::get_id() || features & feature::xy::get_id()) {
-        command::create_stop_move_step(cluster);
-    }
+    if(config) {
+        if (config->feature_flags & feature::hue_saturation::get_id() || config->feature_flags & feature::color_temperature::get_id() || config->feature_flags & feature::xy::get_id()) {
+            command::create_stop_move_step(cluster);
+        }
 
-    /* Features */
-    if (features & feature::hue_saturation::get_id()) {
-        feature::hue_saturation::add(cluster, &(config->hue_saturation));
-    }
-    if (features & feature::color_temperature::get_id()) {
-        feature::color_temperature::add(cluster, &(config->color_temperature));
-    }
-    if (features & feature::xy::get_id()) {
-        feature::xy::add(cluster, &(config->xy));
-    }
-    if (features & feature::enhanced_hue::get_id()) {
-        feature::enhanced_hue::add(cluster, &(config->enhanced_hue));
-    }
-    if (features & feature::color_loop::get_id()) {
-        feature::color_loop::add(cluster, &(config->color_loop));
+        /* Features */
+        if (config->feature_flags & feature::hue_saturation::get_id()) {
+            feature::hue_saturation::add(cluster, &(config->features.hue_saturation));
+        }
+        if (config->feature_flags & feature::color_temperature::get_id()) {
+            feature::color_temperature::add(cluster, &(config->features.color_temperature));
+        }
+        if (config->feature_flags & feature::xy::get_id()) {
+            feature::xy::add(cluster, &(config->features.xy));
+        }
+        if (config->feature_flags & feature::enhanced_hue::get_id()) {
+            feature::enhanced_hue::add(cluster, &(config->features.enhanced_hue));
+        }
+        if (config->feature_flags & feature::color_loop::get_id()) {
+            feature::color_loop::add(cluster, &(config->features.color_loop));
+        }
     }
 
     return cluster;
@@ -1221,6 +1354,28 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         create_default_binding_cluster(endpoint);
     }
 
+    /* Features */
+    if(config) {
+        if (config->feature_flags & feature::multi_speed::get_id()) {
+            feature::multi_speed::add(cluster, &(config->features.multi_speed));
+        }
+        if (config->feature_flags & feature::fan_auto::get_id()) {
+            feature::fan_auto::add(cluster);
+        }
+        if (config->feature_flags & feature::rocking::get_id()) {
+            feature::rocking::add(cluster, &(config->features.rocking));
+        }
+        if (config->feature_flags & feature::wind::get_id()) {
+            feature::wind::add(cluster, &(config->features.wind));
+        }
+        if (config->feature_flags & feature::step::get_id()) {
+            feature::step::add(cluster);
+        }
+        if (config->feature_flags & feature::airflow_direction::get_id()) {
+            feature::airflow_direction::add(cluster, &(config->features.airflow_direction));
+        }
+    }
+
     return cluster;
 }
 } /* fan_control */
@@ -1238,6 +1393,10 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     VerifyOrReturnValue(cluster, NULL, ESP_LOGE(TAG, "Could not create cluster. cluster_id: 0x%08" PRIX32, Thermostat::Id));
 
     if (flags & CLUSTER_FLAG_SERVER) {
+        if (config -> delegate != nullptr) {
+            static const auto delegate_init_cb = ThermostatDelegateInitCB;
+            set_delegate_and_init_callback(cluster, delegate_init_cb, config->delegate);
+        }
         static const auto plugin_server_init_cb = CALL_ONCE(MatterThermostatPluginServerInitCallback);
         set_plugin_server_init_callback(cluster, plugin_server_init_cb);
         set_add_bounds_callback(cluster, thermostat::add_bounds_cb);
@@ -1261,30 +1420,38 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         create_default_binding_cluster(endpoint);
     }
 
+    /* Commands */
+    command::create_setpoint_raise_lower(cluster);
+
     /* Features */
-    if (!(features & (feature::heating::get_id() | feature::cooling::get_id()))) {
-        ESP_LOGE(TAG, "Cluster shall support at least one of heating or cooling features.");
-    }
-    if (features & feature::heating::get_id()) {
-        feature::heating::add(cluster, &(config->heating));
-    }
-    if (features & feature::cooling::get_id()) {
-        feature::cooling::add(cluster, &(config->cooling));
-    }
-    if (features & feature::setback::get_id()) {
-        feature::setback::add(cluster, &(config->setback));
-    }
-    if (features & feature::occupancy::get_id()) {
-        feature::occupancy::add(cluster, &(config->occupancy));
-    }
-    if (features & feature::schedule_configuration::get_id()) {
-        feature::schedule_configuration::add(cluster, &(config->schedule_configuration));
-    }
-    if (features & feature::auto_mode::get_id()) {
-        feature::auto_mode::add(cluster, &(config->auto_mode));
-    }
-    if (features & feature::local_temperature_not_exposed::get_id()) {
-        feature::local_temperature_not_exposed::add(cluster, &(config->local_temperature_not_exposed));
+    if(config) {
+        if (!(config->feature_flags & (feature::heating::get_id() | feature::cooling::get_id()))) {
+            ESP_LOGE(TAG, "Cluster shall support at least one of heating or cooling features.");
+        }
+        if (config->feature_flags & feature::heating::get_id()) {
+            feature::heating::add(cluster, &(config->features.heating));
+        }
+        if (config->feature_flags & feature::cooling::get_id()) {
+            feature::cooling::add(cluster, &(config->features.cooling));
+        }
+        if (config->feature_flags & feature::setback::get_id()) {
+            feature::setback::add(cluster, &(config->features.setback));
+        }
+        if (config->feature_flags & feature::occupancy::get_id()) {
+            feature::occupancy::add(cluster, &(config->features.occupancy));
+        }
+        if (config->feature_flags & feature::auto_mode::get_id()) {
+            feature::auto_mode::add(cluster, &(config->features.auto_mode));
+        }
+        if (config->feature_flags & feature::local_temperature_not_exposed::get_id()) {
+            feature::local_temperature_not_exposed::add(cluster, &(config->features.local_temperature_not_exposed));
+        }
+        if (config->feature_flags & feature::matter_schedule_configuration::get_id()) {
+            feature::matter_schedule_configuration::add(cluster, &(config->features.matter_schedule_configuration));
+        }
+        if (config->feature_flags & feature::presets::get_id()) {
+            feature::presets::add(cluster);
+        }
     }
     return cluster;
 }
@@ -1351,6 +1518,21 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         create_default_binding_cluster(endpoint);
     }
 
+    /* Features */
+    if(config) {
+        if(config->feature_flags & feature::fair::get_id()) {
+            feature::fair::add(cluster);
+        }
+        if(config->feature_flags & feature::moderate::get_id()) {
+            feature::moderate::add(cluster);
+        }
+        if(config->feature_flags & feature::very_poor::get_id()) {
+            feature::very_poor::add(cluster);
+        }
+        if(config->feature_flags & feature::extremely_poor::get_id()) {
+            feature::extremely_poor::add(cluster);
+        }
+    }
     return cluster;
 }
 } /* air_quality */
@@ -1384,6 +1566,17 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         create_default_binding_cluster(endpoint);
     }
 
+    if(config) {
+        if(config->feature_flags & feature::condition::get_id()) {
+            feature::condition::add(cluster, &(config->features.condition));
+        }
+        if(config->feature_flags & feature::warning::get_id()) {
+            feature::warning::add(cluster);
+        }
+        if(config->feature_flags & feature::replacement_product_list::get_id()) {
+            feature::replacement_product_list::add(cluster);
+        }
+    }
     return cluster;
 }
 } /* hepa_filter_monitoring */
@@ -1417,6 +1610,17 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         create_default_binding_cluster(endpoint);
     }
 
+    if(config) {
+        if(config->feature_flags & feature::condition::get_id()) {
+            feature::condition::add(cluster, &(config->features.condition));
+        }
+        if(config->feature_flags & feature::warning::get_id()) {
+            feature::warning::add(cluster);
+        }
+        if(config->feature_flags & feature::replacement_product_list::get_id()) {
+            feature::replacement_product_list::add(cluster);
+        }
+    }
     return cluster;
 }
 } /* activated_carbon_filter_monitoring */
@@ -1457,8 +1661,29 @@ namespace  carbon_monoxide_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        CarbonMonoxideConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* carbon_monoxide_concentration_measurement */
@@ -1467,8 +1692,29 @@ namespace  carbon_dioxide_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        CarbonDioxideConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* carbon_dioxide_concentration_measurement */
@@ -1477,8 +1723,29 @@ namespace  nitrogen_dioxide_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        NitrogenDioxideConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* nitrogen_dioxide_concentration_measurement */
@@ -1487,8 +1754,29 @@ namespace  ozone_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        OzoneConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* ozone_concentration_measurement */
@@ -1497,8 +1785,29 @@ namespace  formaldehyde_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        FormaldehydeConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* formaldehyde_concentration_measurement */
@@ -1507,8 +1816,29 @@ namespace  pm1_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        Pm1ConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* pm1_concentration_measurement */
@@ -1517,8 +1847,29 @@ namespace  pm25_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        Pm25ConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* pm25_concentration_measurement */
@@ -1527,8 +1878,29 @@ namespace  pm10_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        Pm10ConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* pm10_concentration_measurement */
@@ -1537,8 +1909,29 @@ namespace  radon_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags,
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags,
                                                        RadonConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* radon_concentration_measurement */
@@ -1547,7 +1940,28 @@ namespace  total_volatile_organic_compounds_concentration_measurement {
 
 cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
 {
-    return concentration_measurement::create<config_t>(endpoint, config, flags, TotalVolatileOrganicCompoundsConcentrationMeasurement::Id, cluster_revision);
+    cluster_t *cluster = concentration_measurement::create<config_t>(endpoint, config, flags, TotalVolatileOrganicCompoundsConcentrationMeasurement::Id, cluster_revision);
+    if(config) {
+        if(config->feature_flags & feature::numeric_measurement::get_id()) {
+            feature::numeric_measurement::add(cluster, &(config->features.numeric_measurement));
+        }
+        if(config->feature_flags & feature::level_indication::get_id()) {
+            feature::level_indication::add(cluster, &(config->features.level_indication));
+        }
+        if(config->feature_flags & feature::medium_level::get_id()) {
+            feature::medium_level::add(cluster);
+        }
+        if(config->feature_flags & feature::critical_level::get_id()) {
+            feature::critical_level::add(cluster);
+        }
+        if(config->feature_flags & feature::peak_measurement::get_id()) {
+            feature::peak_measurement::add(cluster, &(config->features.peak_measurement));
+        }
+        if(config->feature_flags & feature::average_measurement::get_id()) {
+            feature::average_measurement::add(cluster, &(config->features.average_measurement));
+        }
+    }
+    return cluster;
 }
 
 } /* total_volatile_organic_compounds_concentration_measurement */
@@ -1658,11 +2072,13 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         create_default_binding_cluster(endpoint);
     }
 
-    if (features & feature::spin::get_id()) {
-        feature::spin::add(cluster, &(config->spin));
-    }
-    if (features & feature::rinse::get_id()) {
-        feature::rinse::add(cluster, &(config->rinse));
+    if(config) {
+        if (config->feature_flags & feature::spin::get_id()) {
+            feature::spin::add(cluster, &(config->features.spin));
+        }
+        if (config->feature_flags & feature::rinse::get_id()) {
+            feature::rinse::add(cluster, &(config->features.rinse));
+        }
     }
     return cluster;
 }
@@ -1811,7 +2227,14 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     event::create_all_clear(cluster);
 
     /* Features */
-    feature::smoke_alarm::add(cluster);
+    if(config) {
+        if(config->feature_flags & feature::smoke_alarm::get_id()) {
+            feature::smoke_alarm::add(cluster);
+        }
+        if(config->feature_flags & feature::co_alarm::get_id()) {
+            feature::co_alarm::add(cluster);
+        }
+    }
 
     return cluster;
 }
@@ -1865,6 +2288,52 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     event::create_lock_operation(cluster);
     event::create_lock_operation_error(cluster);
 
+    /* Commands */
+    command::create_lock_door(cluster);
+    command::create_unlock_door(cluster);
+
+    /* Features */
+    if(config) {
+        if(config->feature_flags & feature::pin_credential::get_id()) {
+            feature::pin_credential::add(cluster, &(config->features.pin_credential));
+        }
+        if(config->feature_flags & feature::rfid_credential::get_id()) {
+            feature::rfid_credential::add(cluster, &(config->features.rfid_credential));
+        }
+        if(config->feature_flags & feature::finger_credentials::get_id()) {
+            feature::finger_credentials::add(cluster);
+        }
+        if(config->feature_flags & feature::weekday_access_schedules::get_id()) {
+            feature::weekday_access_schedules::add(cluster);
+        }
+        if(config->feature_flags & feature::door_position_sensor::get_id()) {
+            feature::door_position_sensor::add(cluster);
+        }
+        if(config->feature_flags & feature::face_credentials::get_id()) {
+            feature::face_credentials::add(cluster);
+        }
+        if(config->feature_flags & feature::credential_over_the_air_access::get_id()) {
+            feature::credential_over_the_air_access::add(cluster, &(config->features.credential_over_the_air_access));
+        }
+        if(config->feature_flags & feature::user::get_id()) {
+            feature::user::add(cluster, &(config->features.user));
+        }
+        if(config->feature_flags & feature::year_day_access_schedules::get_id()) {
+            feature::year_day_access_schedules::add(cluster);
+        }
+        if(config->feature_flags & feature::holiday_schedules::get_id()) {
+            feature::holiday_schedules::add(cluster);
+        }
+        if(config->feature_flags & feature::unbolting::get_id()) {
+            feature::unbolting::add(cluster);
+        }
+        if(config->feature_flags & feature::aliro_provisioning::get_id()) {
+            feature::aliro_provisioning::add(cluster);
+        }
+        if(config->feature_flags & feature::aliro_bleuwb::get_id()) {
+            feature::aliro_bleuwb::add(cluster);
+        }
+    }
     return cluster;
 }
 } /* door_lock */
@@ -1910,11 +2379,29 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         create_default_binding_cluster(endpoint);
     }
 
-    /* Features */
-    if (features & feature::lift::get_id()) {
-        feature::lift::add(cluster, &(config->lift));
-    }
+    /* Commands */
+    command::create_up_or_open(cluster);
+    command::create_down_or_close(cluster);
+    command::create_stop_motion(cluster);
 
+    /* Features */
+    if(config) {
+        if (config->feature_flags & feature::lift::get_id()) {
+            feature::lift::add(cluster, &(config->features.lift));
+        }
+        if (config->feature_flags & feature::tilt::get_id()) {
+            feature::tilt::add(cluster, &(config->features.tilt));
+        }
+        if (config->feature_flags & feature::position_aware_lift::get_id()) {
+            feature::position_aware_lift::add(cluster, &(config->features.position_aware_lift));
+        }
+        if (config->feature_flags & feature::absolute_position::get_id()) {
+            feature::absolute_position::add(cluster, &(config->features.absolute_position));
+        }
+        if (config->feature_flags & feature::position_aware_tilt::get_id()) {
+            feature::position_aware_tilt::add(cluster, &(config->features.position_aware_tilt));
+        }
+    }
     return cluster;
 }
 } /* window_covering */
@@ -1950,6 +2437,26 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         create_default_binding_cluster(endpoint);
     }
 
+    if(config) {
+        if (config->feature_flags & feature::latching_switch::get_id()) {
+            feature::latching_switch::add(cluster);
+        }
+        if (config->feature_flags & feature::momentary_switch::get_id()) {
+            feature::momentary_switch::add(cluster);
+        }
+        if (config->feature_flags & feature::momentary_switch_release::get_id()) {
+            feature::momentary_switch_release::add(cluster);
+        }
+        if (config->feature_flags & feature::momentary_switch_long_press::get_id()) {
+            feature::momentary_switch_long_press::add(cluster);
+        }
+        if (config->feature_flags & feature::momentary_switch_multi_press::get_id()) {
+            feature::momentary_switch_multi_press::add(cluster, &(config->features.momentary_switch_multi_press));
+        }
+        if (config->feature_flags & feature::action_switch::get_id()) {
+            feature::action_switch::add(cluster);
+        }
+    }
     return cluster;
 }
 } /* switch_cluster */
@@ -2079,33 +2586,33 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         create_default_binding_cluster(endpoint);
     }
 
-    if(config != nullptr && check_feature_map(config->features)) {
-        if (config->features & feature::other::get_id()) {
+    if(config && check_feature_map(config->feature_flags)) {
+        if (config->feature_flags & feature::other::get_id()) {
             feature::other::add(cluster);
         }
-        if (config->features & feature::passive_infrared::get_id()) {
+        if (config->feature_flags & feature::passive_infrared::get_id()) {
             feature::passive_infrared::add(cluster);
         }
-        if (config->features & feature::ultrasonic::get_id()) {
+        if (config->feature_flags & feature::ultrasonic::get_id()) {
             feature::ultrasonic::add(cluster);
         }
-        if (config->features & feature::physical_contact::get_id()) {
+        if (config->feature_flags & feature::physical_contact::get_id()) {
             feature::physical_contact::add(cluster);
         }
-        if (config->features & feature::active_infrared::get_id()) {
+        if (config->feature_flags & feature::active_infrared::get_id()) {
             feature::active_infrared::add(cluster);
         }
-        if (config->features & feature::radar::get_id()) {
+        if (config->feature_flags & feature::radar::get_id()) {
             feature::radar::add(cluster);
         }
-        if (config->features & feature::rf_sensing::get_id()) {
+        if (config->feature_flags & feature::rf_sensing::get_id()) {
             feature::rf_sensing::add(cluster);
         }
-        if (config->features & feature::vision::get_id()) {
+        if (config->feature_flags & feature::vision::get_id()) {
             feature::vision::add(cluster);
         }
     } else {
-        ESP_LOGE(TAG, "Config is NULL or mandatory features are missing.");
+        ESP_LOGE(TAG, "Config is NULL or mandatory feature_flags are missing.");
     }
     return cluster;
 }
@@ -2175,17 +2682,19 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if (features & feature::visual::get_id()) {
-        feature::visual::add(cluster, &(config->visual));
-    }
-    if (features & feature::audible::get_id()) {
-        feature::audible::add(cluster, &(config->audible));
-    }
-    if (features & feature::alarm_suppress::get_id()) {
-        feature::alarm_suppress::add(cluster, &(config->alarm_suppress));
-    }
-    if (features & feature::sensitivity_level::get_id()) {
-        feature::sensitivity_level::add(cluster, &(config->sensitivity_level));
+    if(config) {
+        if (config->feature_flags & feature::visual::get_id()) {
+            feature::visual::add(cluster, &(config->features.visual));
+        }
+        if (config->feature_flags & feature::audible::get_id()) {
+            feature::audible::add(cluster, &(config->features.audible));
+        }
+        if (config->feature_flags & feature::alarm_suppress::get_id()) {
+            feature::alarm_suppress::add(cluster, &(config->features.alarm_suppress));
+        }
+        if (config->feature_flags & feature::sensitivity_level::get_id()) {
+            feature::sensitivity_level::add(cluster, &(config->features.sensitivity_level));
+        }
     }
     return cluster;
 }
@@ -2258,8 +2767,8 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if (features & feature::calendar_format::get_id()) {
-        feature::calendar_format::add(cluster, &(config->calendar_format));
+    if (config && config->feature_flags & feature::calendar_format::get_id()) {
+        feature::calendar_format::add(cluster, &(config->features.calendar_format));
     }
 
     return cluster;
@@ -2427,30 +2936,30 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         create_default_binding_cluster(endpoint);
     }
 
-    if(config != nullptr && check_feature_map(config->features)) {
-        if (config->features & feature::constant_pressure::get_id()) {
-            feature::constant_pressure::add(cluster, &config->constant_pressure);
+    if(config && check_feature_map(config->feature_flags)) {
+        if (config->feature_flags & feature::constant_pressure::get_id()) {
+            feature::constant_pressure::add(cluster, &config->features.constant_pressure);
         }
-        if (config->features & feature::compensated_pressure::get_id()) {
-            feature::compensated_pressure::add(cluster, &config->compensated_pressure);
+        if (config->feature_flags & feature::compensated_pressure::get_id()) {
+            feature::compensated_pressure::add(cluster, &config->features.compensated_pressure);
         }
-        if (config->features & feature::constant_flow::get_id()) {
-            feature::constant_flow::add(cluster, &config->constant_flow);
+        if (config->feature_flags & feature::constant_flow::get_id()) {
+            feature::constant_flow::add(cluster, &config->features.constant_flow);
         }
-        if (config->features & feature::constant_speed::get_id()) {
-            feature::constant_speed::add(cluster, &config->constant_speed);
+        if (config->feature_flags & feature::constant_speed::get_id()) {
+            feature::constant_speed::add(cluster, &config->features.constant_speed);
         }
-        if (config->features & feature::constant_temperature::get_id()) {
-            feature::constant_temperature::add(cluster, &config->constant_temperature);
+        if (config->feature_flags & feature::constant_temperature::get_id()) {
+            feature::constant_temperature::add(cluster, &config->features.constant_temperature);
         }
-        if (config->features & feature::automatic::get_id()) {
+        if (config->feature_flags & feature::automatic::get_id()) {
             feature::automatic::add(cluster);
         }
-        if (config->features & feature::local_operation::get_id()) {
+        if (config->feature_flags & feature::local_operation::get_id()) {
             feature::local_operation::add(cluster);
         }
     } else {
-        ESP_LOGE(TAG, "Config is NULL or mandatory features are missing.");
+        ESP_LOGE(TAG, "Config is NULL or mandatory feature_flags are missing.");
     }
     return cluster;
 }
@@ -2493,9 +3002,12 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         create_default_binding_cluster(endpoint);
     }
 
+    /* Commands */
+    command::create_change_to_mode(cluster);
+
     /* Features */
-    if (features & feature::on_off::get_id()) {
-        feature::on_off::add(cluster, &(config->on_off));
+    if (config && config->feature_flags & feature::on_off::get_id()) {
+        feature::on_off::add(cluster, &(config->features.on_off));
     }
     return cluster;
 }
@@ -2510,6 +3022,10 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     cluster_t *cluster = cluster::create(endpoint, DiagnosticLogs::Id, flags);
 
     if (flags & CLUSTER_FLAG_SERVER) {
+        if (config -> delegate != nullptr) {
+            static const auto delegate_init_cb = DiagnosticLogsDelegateInitCB;
+            set_delegate_and_init_callback(cluster, delegate_init_cb, config->delegate);
+        }
         static const auto plugin_server_init_cb = CALL_ONCE(MatterDiagnosticLogsPluginServerInitCallback);
         set_plugin_server_init_callback(cluster, plugin_server_init_cb);
         add_function_list(cluster, function_list, function_flags);
@@ -2524,6 +3040,10 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
     if (flags & CLUSTER_FLAG_CLIENT) {
         create_default_binding_cluster(endpoint);
     }
+
+    /* commands */
+    command::create_retrieve_logs_request(cluster);
+    command::create_retrieve_logs_response(cluster);
 
     return cluster;
 }
@@ -2550,7 +3070,7 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
     /* Features */
-    if (features & feature::watermarks::get_id()) {
+    if (config && config->feature_flags & feature::watermarks::get_id()) {
         feature::watermarks::add(cluster);
     }
 
@@ -2579,15 +3099,20 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
+    /* Commands */
+    command::create_set_temperature(cluster);
+
     /* Features */
-    if (features & feature::temperature_number::get_id()) {
-        feature::temperature_number::add(cluster, &(config->temperature_number));
-    }
-    if (features & feature::temperature_level::get_id()) {
-        feature::temperature_level::add(cluster, &(config->temperature_level));
-    }
-    if (features & feature::temperature_step::get_id()) {
-        feature::temperature_step::add(cluster, &(config->temperature_step));
+    if(config) {
+        if (config->feature_flags & feature::temperature_number::get_id()) {
+            feature::temperature_number::add(cluster, &(config->features.temperature_number));
+        }
+        if (config->feature_flags & feature::temperature_level::get_id()) {
+            feature::temperature_level::add(cluster, &(config->features.temperature_level));
+        }
+        if (config->feature_flags & feature::temperature_step::get_id()) {
+            feature::temperature_step::add(cluster, &(config->features.temperature_step));
+        }
     }
 
     return cluster;
@@ -2797,14 +3322,20 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
-    if (features & feature::power_as_number::get_id()) {
-        feature::power_as_number::add(cluster);
-    }
-    if (features & feature::power_in_watts::get_id()) {
-        feature::power_in_watts::add(cluster);
-    }
-    if (features & feature::power_number_limits::get_id()) {
-        feature::power_number_limits::add(cluster);
+    /* Commands */
+    command::create_set_cooking_parameters(cluster);
+
+    /* Features */
+    if(config) {
+        if (config->feature_flags & feature::power_as_number::get_id()) {
+            feature::power_as_number::add(cluster);
+        }
+        if (config->feature_flags & feature::power_in_watts::get_id()) {
+            feature::power_in_watts::add(cluster);
+        }
+        if (config->feature_flags & feature::power_number_limits::get_id()) {
+            feature::power_number_limits::add(cluster);
+        }
     }
 
     return cluster;
@@ -2872,6 +3403,23 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags)
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
+    /* Commands */
+    command::create_send_key(cluster);
+    command::create_send_key_response(cluster);
+
+    /* Features */
+    if(config) {
+        if(config->feature_flags & feature::navigation_key_codes::get_id()) {
+            feature::navigation_key_codes::add(cluster);
+        }
+        if(config->feature_flags & feature::location_keys::get_id()) {
+            feature::location_keys::add(cluster);
+        }
+        if(config->feature_flags & feature::number_keys::get_id()) {
+            feature::number_keys::add(cluster);
+        }
+    }
+
     return cluster;
 }
 } /* keypad_input */
@@ -2900,18 +3448,20 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if (features & feature::node_topology::get_id()) {
-        feature::node_topology::add(cluster);
-    }
-    else if (features & feature::tree_topology::get_id()) {
-            feature::tree_topology::add(cluster);
+    if(config) {
+        if (config->feature_flags & feature::node_topology::get_id()) {
+            feature::node_topology::add(cluster);
         }
-        else if (features & feature::set_topology::get_id()) {
-            feature::set_topology::add(cluster);
-            if (features & feature::dynamic_power_flow::get_id()) {
-                feature::dynamic_power_flow::add(cluster);
+        else if (config->feature_flags & feature::tree_topology::get_id()) {
+                feature::tree_topology::add(cluster);
             }
-        }
+            else if (config->feature_flags & feature::set_topology::get_id()) {
+                feature::set_topology::add(cluster);
+                if (config->feature_flags & feature::dynamic_power_flow::get_id()) {
+                    feature::dynamic_power_flow::add(cluster);
+                }
+            }
+    }
 
     return cluster;
 }
@@ -2945,28 +3495,30 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if((features & feature::direct_current::get_id()) || (features & feature::alternating_current::get_id())) {
-        if (features & feature::direct_current::get_id()) {
-            feature::direct_current::add(cluster);
+    if(config) {
+        if((config->feature_flags & feature::direct_current::get_id()) || (config->feature_flags & feature::alternating_current::get_id())) {
+            if (config->feature_flags & feature::direct_current::get_id()) {
+                feature::direct_current::add(cluster);
+            }
+            if (config->feature_flags & feature::alternating_current::get_id()) {
+                feature::alternating_current::add(cluster);
+
+                if (config->feature_flags & feature::polyphase_power::get_id()) {
+                    feature::polyphase_power::add(cluster);
+                }
+
+                if (config->feature_flags & feature::harmonics::get_id()) {
+                    feature::harmonics::add(cluster);
+                }
+
+                if (config->feature_flags & feature::power_quality::get_id()) {
+                    feature::power_quality::add(cluster);
+                }
+            }
+        } else {
+            ESP_LOGE(TAG, "At least one of the feature from Direct Current, Alternating Current shall be supported.");
+            return NULL;
         }
-        if (features & feature::alternating_current::get_id()) {
-            feature::alternating_current::add(cluster);
-
-            if (features & feature::polyphase_power::get_id()) {
-                feature::polyphase_power::add(cluster);
-            }
-
-            if (features & feature::harmonics::get_id()) {
-                feature::harmonics::add(cluster);
-            }
-
-            if (features & feature::power_quality::get_id()) {
-                feature::power_quality::add(cluster);
-            }
-        }
-    } else {
-        ESP_LOGE(TAG, "At least one of the feature from Direct Current, Alternating Current shall be supported.");
-        return NULL;
     }
 
     return cluster;
@@ -2994,28 +3546,30 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if((features & feature::imported_energy::get_id()) || (features & feature::exported_energy::get_id())) {
-        if (features & feature::imported_energy::get_id()) {
-            feature::imported_energy::add(cluster);
+    if(config) {
+        if((config->feature_flags & feature::imported_energy::get_id()) || (config->feature_flags & feature::exported_energy::get_id())) {
+            if (config->feature_flags & feature::imported_energy::get_id()) {
+                feature::imported_energy::add(cluster);
+            }
+            if (config->feature_flags & feature::exported_energy::get_id()) {
+                feature::exported_energy::add(cluster);
+            }
+        } else {
+            ESP_LOGE(TAG, "At least one of the feature from Imported Energy, Exported Energy shall be supported.");
+            return NULL;
         }
-        if (features & feature::exported_energy::get_id()) {
-            feature::exported_energy::add(cluster);
-        }
-    } else {
-        ESP_LOGE(TAG, "At least one of the feature from Imported Energy, Exported Energy shall be supported.");
-        return NULL;
-    }
 
-    if((features & feature::cumulative_energy::get_id()) || (features & feature::periodic_energy::get_id())) {
-        if (features & feature::cumulative_energy::get_id()) {
-            feature::cumulative_energy::add(cluster);
+        if((config->feature_flags & feature::cumulative_energy::get_id()) || (config->feature_flags & feature::periodic_energy::get_id())) {
+            if (config->feature_flags & feature::cumulative_energy::get_id()) {
+                feature::cumulative_energy::add(cluster);
+            }
+            if (config->feature_flags & feature::periodic_energy::get_id()) {
+                feature::periodic_energy::add(cluster);
+            }
+        } else {
+            ESP_LOGE(TAG, "At least one of the feature from Cumulative Energy, Periodic Energy shall be supported.");
+            return NULL;
         }
-        if (features & feature::periodic_energy::get_id()) {
-            feature::periodic_energy::add(cluster);
-        }
-    } else {
-        ESP_LOGE(TAG, "At least one of the feature from Cumulative Energy, Periodic Energy shall be supported.");
-        return NULL;
     }
 
     return cluster;
@@ -3093,21 +3647,27 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if (features & feature::charging_preferences::get_id()) {
-        feature::charging_preferences::add(cluster);
+    if(config) {
+        if (config->feature_flags & feature::charging_preferences::get_id()) {
+            feature::charging_preferences::add(cluster);
+        }
+        if (config->feature_flags & feature::soc_reporting::get_id()) {
+            feature::soc_reporting::add(cluster);
+        }
+        if (config->feature_flags & feature::plug_and_charge::get_id()) {
+            feature::plug_and_charge::add(cluster);
+        }
+        if (config->feature_flags & feature::rfid::get_id()) {
+            feature::rfid::add(cluster);
+        }
+        if (config->feature_flags & feature::v2x::get_id()) {
+            feature::v2x::add(cluster);
+        }
     }
-    if (features & feature::soc_reporting::get_id()) {
-        feature::soc_reporting::add(cluster);
-    }
-    if (features & feature::plug_and_charge::get_id()) {
-        feature::plug_and_charge::add(cluster);
-    }
-    if (features & feature::rfid::get_id()) {
-        feature::rfid::add(cluster);
-    }
-    if (features & feature::v2x::get_id()) {
-        feature::v2x::add(cluster);
-    }
+
+    /* Commands */
+    command::create_disable(cluster);
+    command::create_enable_charging(cluster);
 
     return cluster;
 }
@@ -3150,12 +3710,18 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         create_default_binding_cluster(endpoint);
     }
 
+    /* Commands */
+    command::create_open(cluster);
+    command::create_close(cluster);
+
     /* Features */
-    if (features & feature::time_sync::get_id()) {
-        feature::time_sync::add(cluster, &(config->time_sync));
-    }
-    if (features & feature::level::get_id()) {
-        feature::level::add(cluster, &(config->level));
+    if(config) {
+        if (config->feature_flags & feature::time_sync::get_id()) {
+            feature::time_sync::add(cluster, &(config->features.time_sync));
+        }
+        if (config->feature_flags & feature::level::get_id()) {
+            feature::level::add(cluster, &(config->features.level));
+        }
     }
 
     return cluster;
@@ -3197,31 +3763,37 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if (features & feature::power_adjustment::get_id()) {
-        feature::power_adjustment::add(cluster);
-    }
-    if (features & feature::power_forecast_reporting::get_id()) {
-        feature::power_forecast_reporting::add(cluster);
-    }
-    if (features & feature::state_forecast_reporting::get_id()) {
-        if ((!(features & feature::power_adjustment::get_id()) ||
-            (features & feature::start_time_adjustment::get_id()) ||
-            (features & feature::pausable::get_id()) ||
-            (features & feature::forecast_adjustment::get_id()) ||
-            (features & feature::constraint_based_adjustment::get_id())) &&
-            !(features & feature::power_forecast_reporting::get_id())) {
-
-            feature::state_forecast_reporting::add(cluster);
+    if(config) {
+        if (config->feature_flags & feature::power_adjustment::get_id()) {
+            feature::power_adjustment::add(cluster);
         }
-    }
-    if (features & feature::pausable::get_id()) {
-        feature::pausable::add(cluster);
-    }
-    if (features & feature::forecast_adjustment::get_id()) {
-        feature::forecast_adjustment::add(cluster);
-    }
-    if (features & feature::constraint_based_adjustment::get_id()) {
-        feature::constraint_based_adjustment::add(cluster);
+        if (config->feature_flags & feature::power_forecast_reporting::get_id()) {
+            if ((!(config->feature_flags & feature::power_adjustment::get_id()) ||
+                (config->feature_flags & feature::start_time_adjustment::get_id()) ||
+                (config->feature_flags & feature::pausable::get_id()) ||
+                (config->feature_flags & feature::forecast_adjustment::get_id()) ||
+                (config->feature_flags & feature::constraint_based_adjustment::get_id()))) {
+
+                feature::power_forecast_reporting::add(cluster);
+            }
+        }
+        else if (config->feature_flags & feature::state_forecast_reporting::get_id()) {
+            if (!(config->feature_flags & feature::power_adjustment::get_id())) {
+                feature::state_forecast_reporting::add(cluster);
+            }
+        }
+        if (config->feature_flags & feature::pausable::get_id()) {
+            feature::pausable::add(cluster);
+        }
+        if (config->feature_flags & feature::start_time_adjustment::get_id()) {
+            feature::start_time_adjustment::add(cluster);
+        }
+        if (config->feature_flags & feature::forecast_adjustment::get_id()) {
+            feature::forecast_adjustment::add(cluster);
+        }
+        if (config->feature_flags & feature::constraint_based_adjustment::get_id()) {
+            feature::constraint_based_adjustment::add(cluster);
+        }
     }
     return cluster;
 }
@@ -3332,7 +3904,13 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
-    if (features & feature::pan_change::get_id()) {
+    /* Commands */
+    command::create_get_active_dataset_request(cluster);
+    command::create_get_pending_dataset_request(cluster);
+    command::create_dataset_response(cluster);
+    command::create_set_active_dataset_request(cluster);
+
+    if (config && config->feature_flags & feature::pan_change::get_id()) {
         feature::pan_change::add(cluster);
     }
 
@@ -3366,6 +3944,10 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
+    /* Commands */
+    command::create_network_passphrase_request(cluster);
+    command::create_network_passphrase_response(cluster);
+
     return cluster;
 }
 
@@ -3396,6 +3978,12 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         /** Attributes not managed internally **/
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
+
+    /* Commands */
+    command::create_add_network(cluster);
+    command::create_remove_network(cluster);
+    command::create_get_operational_dataset(cluster);
+    command::create_operational_dataset_response(cluster);
 
     return cluster;
 }
@@ -3430,15 +4018,21 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         global::attribute::create_cluster_revision(cluster, cluster_revision);
     }
 
-    if (features & feature::select_while_running::get_id()) {
-        feature::select_while_running::add(cluster);
+    if(config) {
+        if (config->feature_flags & feature::select_while_running::get_id()) {
+            feature::select_while_running::add(cluster);
+        }
+        if (config->feature_flags & feature::progress_reporting::get_id()) {
+            feature::progress_reporting::add(cluster);
+        }
+        if (config->feature_flags & feature::maps::get_id()) {
+            feature::maps::add(cluster);
+        }
     }
-    if (features & feature::progress_reporting::get_id()) {
-        feature::progress_reporting::add(cluster);
-    }
-    if (features & feature::maps::get_id()) {
-        feature::maps::add(cluster);
-    }
+
+    /* Commands */
+    command::create_select_areas(cluster);
+    command::create_select_areas_response(cluster);
 
     return cluster;
 }
@@ -3474,12 +4068,18 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
         attribute::create_boost_state(cluster, config->boost_state);
     }
 
-    if (features & feature::energy_management::get_id()) {
-        feature::energy_management::add(cluster, &(config->energy_management));
+    if(config) {
+        if (config->feature_flags & feature::energy_management::get_id()) {
+            feature::energy_management::add(cluster, &(config->features.energy_management));
+        }
+        if (config->feature_flags & feature::tank_percent::get_id()) {
+            feature::tank_percent::add(cluster, &(config->features.tank_percent));
+        }
     }
-    if (features & feature::tank_percent::get_id()) {
-        feature::tank_percent::add(cluster, &(config->tank_percent));
-    }
+
+    /* Commands */
+    command::create_boost(cluster);
+    command::create_cancel_boost(cluster);
 
     event::create_boost_started(cluster);
     event::create_boost_ended(cluster);
@@ -3560,11 +4160,13 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     }
 
     /* Features */
-    if (features & feature::energy_balance::get_id()) {
-        feature::energy_balance::add(cluster, &(config->energy_balance));
-    }
-    if (features & feature::low_power_mode_sensitivity::get_id()) {
-        feature::low_power_mode_sensitivity::add(cluster, &(config->low_power_mode_sensitivity));
+    if(config) {
+        if (config->feature_flags & feature::energy_balance::get_id()) {
+            feature::energy_balance::add(cluster, &(config->features.energy_balance));
+        }
+        if (config->feature_flags & feature::low_power_mode_sensitivity::get_id()) {
+            feature::low_power_mode_sensitivity::add(cluster, &(config->features.low_power_mode_sensitivity));
+        }
     }
 
     return cluster;
@@ -3602,6 +4204,11 @@ cluster_t *create(endpoint_t *endpoint, config_t *config, uint8_t flags, uint32_
     if (flags & CLUSTER_FLAG_CLIENT) {
         create_default_binding_cluster(endpoint);
     }
+
+    /* Commands */
+    command::create_request_commissioning_approval(cluster);
+    command::create_commission_node(cluster);
+    command::create_reverse_open_commissioning_window(cluster);
 
     event::create_commissioning_request_result(cluster);
     return cluster;

@@ -53,6 +53,13 @@ typedef handle_t event_t;
 /** TODO: Change this */
 typedef void (*event_callback_t)(const ChipDeviceEvent *event, intptr_t arg);
 
+/** Return whether the Matter is intialized and started
+ *
+ *  @return true if Matter is started
+ *  @return false if Matter is not started
+ */
+bool is_started();
+
 /** ESP Matter Start
  *
  * Initialize and start the matter thread.
@@ -120,6 +127,13 @@ namespace node {
  */
 node_t *create_raw();
 
+/** Destroy raw node
+ *
+ * @return ESP_OK on success.
+ * @return error in case of failure.
+ */
+esp_err_t destroy_raw();
+
 /** Get node
  *
  * @return Node handle on success.
@@ -127,6 +141,39 @@ node_t *create_raw();
  */
 node_t *get();
 
+/** Destroy node
+ *
+ * This will destroy the node and all the endpoints, clusters, attributes, commands and events associated with it.
+ *
+ * @note: Call this function only if matter is not running.
+ *
+ * @return ESP_OK on success.
+ * @return error in case of failure.
+ */
+esp_err_t destroy();
+
+/** Get the endpoint count for a server cluster
+ *
+ * Get the number of endpoints that have the given cluster ID as a server cluster.
+ *
+ * @param[in] cluster_id Cluster ID.
+ *
+ * @return Endpoint count on success.
+ * @return 0 in case of failure or if not found on any endpoint.
+ */
+
+uint32_t get_server_cluster_endpoint_count(uint32_t cluster_id);
+
+/** Get the endpoint count for a client cluster
+ *
+ * Get the number of endpoints that have the given cluster ID as a client cluster.
+ *
+ * @param[in] cluster_id Cluster ID.
+ *
+ * @return Endpoint count on success.
+ * @return 0 in case of failure or if not found on any endpoint.
+ */
+uint32_t get_client_cluster_endpoint_count(uint32_t cluster_id);
 } /* node */
 
 namespace endpoint {

@@ -16,6 +16,8 @@
 #include <esp_log.h>
 #include <esp_matter.h>
 #include <esp_matter_core.h>
+#include <esp_matter_icd_configuration.h>
+#include <esp_matter_test_event_trigger.h>
 #include <nvs.h>
 
 #include <app/clusters/general-diagnostics-server/general-diagnostics-server.h>
@@ -32,7 +34,16 @@
 #include <platform/CHIPDeviceLayer.h>
 #include <platform/DeviceInfoProvider.h>
 #include <platform/DiagnosticDataProvider.h>
+#if CHIP_DEVICE_CONFIG_ENABLE_WIFI
+#ifdef CONFIG_CHIP_ENABLE_EXTERNAL_PLATFORM
+#ifndef EXTERNAL_ESP32UTILS_HEADER
+#error "Please define EXTERNAL_ESP32UTILS_HEADER in your external platform gn/cmake file"
+#endif // !EXTERNAL_ESP32UTILS_HEADER
+#include EXTERNAL_ESP32UTILS_HEADER
+#else
 #include <platform/ESP32/ESP32Utils.h>
+#endif // CONFIG_CHIP_ENABLE_EXTERNAL_PLATFORM
+#endif // CHIP_DEVICE_CONFIG_ENABLE_WIFI
 #include <esp_matter_ota.h>
 #include <esp_matter_mem.h>
 #include <esp_matter_providers.h>
@@ -414,8 +425,6 @@ static int get_next_index()
 
 static esp_err_t disable(endpoint_t *endpoint)
 {
-    VerifyOrReturnError(endpoint, ESP_ERR_INVALID_ARG, ESP_LOGE(TAG, "Endpoint cannot be NULL"));
-
     /* Take lock if not already taken */
     lock::status_t lock_status = lock::chip_stack_lock(portMAX_DELAY);
 
@@ -459,8 +468,8 @@ esp_err_t enable(endpoint_t *endpoint)
         return ESP_ERR_NO_MEM;
     }
     for (size_t i = 0; i < current_endpoint->device_type_count; ++i) {
-        device_types_ptr[i].deviceId = current_endpoint->device_type_ids[i];
-        device_types_ptr[i].deviceVersion = current_endpoint->device_type_versions[i];
+        device_types_ptr[i].deviceTypeId = current_endpoint->device_type_ids[i];
+        device_types_ptr[i].deviceTypeRevision = current_endpoint->device_type_versions[i];
     }
     chip::Span<EmberAfDeviceType> device_types(device_types_ptr, current_endpoint->device_type_count);
     current_endpoint->device_types_ptr = device_types_ptr;
@@ -512,6 +521,23 @@ esp_err_t enable(endpoint_t *endpoint)
         accepted_command_ids = NULL;
         generated_command_ids = NULL;
         cluster_id = cluster::get_id((cluster_t*)cluster);
+
+        /* Init identify if exists and not initialized */
+        if (cluster_id == chip::app::Clusters::Identify::Id && current_endpoint->identify == NULL) {
+            _attribute_t *identify_type_attr = (_attribute_t *)attribute::get(
+                current_endpoint->endpoint_id, cluster_id, chip::app::Clusters::Identify::Attributes::IdentifyType::Id);
+            if (identify_type_attr) {
+                if (identification::init(current_endpoint->endpoint_id, identify_type_attr->val.val.u8) != ESP_OK) {
+                    ESP_LOGE(TAG, "Failed to init identification");
+                    err = ESP_FAIL;
+                    break;
+                }
+            } else {
+                ESP_LOGE(TAG, "Can't get IdentifyType attribute in Identify cluster");
+                err = ESP_ERR_INVALID_STATE;
+                break;
+            }
+        }
 
         /* Client Generated Commands */
         command_flag = COMMAND_FLAG_ACCEPTED;
@@ -720,12 +746,13 @@ static void esp_matter_chip_init_task(intptr_t context)
 
     initParams.InitializeStaticResourcesBeforeServerInit();
     initParams.appDelegate = &s_app_delegate;
+    initParams.testEventTriggerDelegate = test_event_trigger::get_delegate();
     initParams.dataModelProvider = chip::app::CodegenDataModelProviderInstance(initParams.persistentStorageDelegate);
 
 #ifdef CONFIG_ESP_MATTER_ENABLE_DATA_MODEL
     // Group data provider injection for dynamic data model
     {
-        uint8_t groups_server_cluster_count = cluster::groups::get_server_cluster_count();
+        uint8_t groups_server_cluster_count = node::get_server_cluster_endpoint_count(chip::app::Clusters::Groups::Id);
         uint16_t max_groups_per_fabric = groups_server_cluster_count * MAX_GROUPS_PER_FABRIC_PER_ENDPOINT;
 
         // since groupDataProvider is a static variable, it won't be released.
@@ -744,25 +771,6 @@ static void esp_matter_chip_init_task(intptr_t context)
         ESP_LOGE(TAG, "Failed to add fabric delegate, err:%" CHIP_ERROR_FORMAT, ret.Format());
     }
     chip::Server::GetInstance().Init(initParams);
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-#ifdef CONFIG_ESP_MATTER_ENABLE_OPENTHREAD
-    VerifyOrReturn(ThreadStackMgr().InitThreadStack() == CHIP_NO_ERROR, ESP_LOGE(TAG, "Failed to initialize Thread stack"));
-#if CHIP_CONFIG_ENABLE_ICD_SERVER
-    VerifyOrReturn(ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_SleepyEndDevice) == CHIP_NO_ERROR, ESP_LOGE(TAG, "Failed to set the Thread device type"));
-
-#elif CHIP_DEVICE_CONFIG_THREAD_FTD
-    VerifyOrReturn(ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_Router) == CHIP_NO_ERROR, ESP_LOGE(TAG, "Failed to set the Thread device type"));
-#else
-    VerifyOrReturn(ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_MinimalEndDevice) == CHIP_NO_ERROR, ESP_LOGE(TAG, "Failed to set the Thread device type"));
-#endif
-    VerifyOrReturn(ThreadStackMgr().StartThreadTask() == CHIP_NO_ERROR, ESP_LOGE(TAG, "Failed to launch Thread task"));
-    // If Thread is Provisioned, publish the dns service
-    if (chip::DeviceLayer::ConnectivityMgr().IsThreadProvisioned() &&
-        (chip::Server::GetInstance().GetFabricTable().FabricCount() != 0)) {
-        chip::app::DnssdServer::Instance().StartServer();
-    }
-#endif // CONFIG_ESP_MATTER_ENABLE_OPENTHREAD
-#endif
     if (endpoint::enable_all() != ESP_OK) {
         ESP_LOGE(TAG, "Enable all endpoints failure");
     }
@@ -775,6 +783,20 @@ static void esp_matter_chip_init_task(intptr_t context)
     if (GetDiagnosticDataProvider().GetBootReason(bootReason) == CHIP_NO_ERROR) {
         chip::app::Clusters::GeneralDiagnosticsServer::Instance().OnDeviceReboot(bootReason);
     }
+
+#if CHIP_CONFIG_ENABLE_ICD_SERVER
+    if (!icd::get_icd_server_enabled()) {
+        // ICD server has been initialized in chip::Server::GetInstance().Init(). disable it here if
+        // icd_server_enabled is set to false.
+        chip::app::InteractionModelEngine::GetInstance()->SetICDManager(nullptr);
+        chip::app::DnssdServer::Instance().SetICDManager(nullptr);
+        chip::TestEventTriggerDelegate *test_event_trigger = chip::Server::GetInstance().GetTestEventTriggerDelegate();
+        if (test_event_trigger) {
+            test_event_trigger->RemoveHandler(&chip::Server::GetInstance().GetICDManager());
+        }
+        chip::Server::GetInstance().GetICDManager().Shutdown();
+    }
+#endif // CHIP_CONFIG_ENABLE_ICD_SERVER
     PlatformMgr().ScheduleWork(deinit_ble_if_commissioned, reinterpret_cast<intptr_t>(nullptr));
     xTaskNotifyGive(task_to_notify);
 }
@@ -813,6 +835,35 @@ static void device_callback_internal(const ChipDeviceEvent * event, intptr_t arg
     }
 }
 
+static esp_err_t init_thread_stack_and_start_thread_task()
+{
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+#ifdef CONFIG_ESP_MATTER_ENABLE_OPENTHREAD
+    VerifyOrReturnError(ThreadStackMgr().InitThreadStack() == CHIP_NO_ERROR, ESP_FAIL,
+                        ESP_LOGE(TAG, "Failed to initialize Thread stack"));
+#if CHIP_CONFIG_ENABLE_ICD_SERVER
+    if (icd::get_icd_server_enabled()) {
+        VerifyOrReturnError(ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_SleepyEndDevice) == CHIP_NO_ERROR,
+                            ESP_FAIL, ESP_LOGE(TAG, "Failed to set the Thread device type"));
+    } else {
+        VerifyOrReturnError(ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_MinimalEndDevice) == CHIP_NO_ERROR,
+                            ESP_FAIL, ESP_LOGE(TAG, "Failed to set the Thread device type"));
+    }
+
+#elif CHIP_DEVICE_CONFIG_THREAD_FTD
+    VerifyOrReturnError(ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_Router) == CHIP_NO_ERROR,
+                        ESP_FAIL, ESP_LOGE(TAG, "Failed to set the Thread device type"));
+#else
+    VerifyOrReturnError(ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_MinimalEndDevice) == CHIP_NO_ERROR,
+                        ESP_FAIL, ESP_LOGE(TAG, "Failed to set the Thread device type"));
+#endif
+    VerifyOrReturnError(ThreadStackMgr().StartThreadTask() == CHIP_NO_ERROR, ESP_FAIL,
+                        ESP_LOGE(TAG, "Failed to launch Thread task"));
+#endif // CONFIG_ESP_MATTER_ENABLE_OPENTHREAD
+#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
+    return ESP_OK;
+}
+
 static esp_err_t chip_init(event_callback_t callback, intptr_t callback_arg)
 {
     VerifyOrReturnError(chip::Platform::MemoryInit() == CHIP_NO_ERROR, ESP_ERR_NO_MEM, ESP_LOGE(TAG, "Failed to initialize CHIP memory pool"));
@@ -829,6 +880,7 @@ static esp_err_t chip_init(event_callback_t callback, intptr_t callback_arg)
     if(callback) {
        PlatformMgr().AddEventHandler(callback, callback_arg);
     }
+    init_thread_stack_and_start_thread_task();
 #if CONFIG_ESP_MATTER_ENABLE_MATTER_SERVER
     // Add bounds to all attributes
     esp_matter::cluster::add_bounds_callback_common();
@@ -843,6 +895,11 @@ static esp_err_t chip_init(event_callback_t callback, intptr_t callback_arg)
     return ESP_OK;
 }
 
+bool is_started()
+{
+    return esp_matter_started;
+}
+
 esp_err_t start(event_callback_t callback, intptr_t callback_arg)
 {
     VerifyOrReturnError(!esp_matter_started, ESP_ERR_INVALID_STATE, ESP_LOGE(TAG, "esp_matter has started"));
@@ -853,11 +910,22 @@ esp_err_t start(event_callback_t callback, intptr_t callback_arg)
     VerifyOrReturnError((err == ESP_OK || err == ESP_ERR_INVALID_STATE), err, ESP_LOGE(TAG, "Error create default event loop"));
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
     VerifyOrReturnError(chip::DeviceLayer::Internal::ESP32Utils::InitWiFiStack() == CHIP_NO_ERROR, ESP_FAIL, ESP_LOGE(TAG, "Error initializing Wi-Fi stack"));
-#endif
+#endif // CHIP_DEVICE_CONFIG_ENABLE_WIFI
     esp_matter_ota_requestor_init();
 
     err = chip_init(callback, callback_arg);
     VerifyOrReturnError(err == ESP_OK, err, ESP_LOGE(TAG, "Error initializing matter"));
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+#ifdef CONFIG_ESP_MATTER_ENABLE_OPENTHREAD
+    // If Thread is Provisioned, publish the dns service
+    if (chip::DeviceLayer::ConnectivityMgr().IsThreadProvisioned() &&
+        (chip::Server::GetInstance().GetFabricTable().FabricCount() != 0)) {
+        
+        PlatformMgr().ScheduleWork([](intptr_t){ chip::app::DnssdServer::Instance().StartServer(); },
+                                   reinterpret_cast<intptr_t>(nullptr));
+    }
+#endif // CONFIG_ESP_MATTER_ENABLE_OPENTHREAD
+#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
     esp_matter_started = true;
 #if defined(CONFIG_ESP_MATTER_ENABLE_MATTER_SERVER) && defined(CONFIG_ESP_MATTER_ENABLE_DATA_MODEL)
     err = node::read_min_unused_endpoint_id();
@@ -891,7 +959,7 @@ esp_err_t factory_reset()
     }
 
     /* Submodule factory reset. This also restarts after completion. */
-    ConfigurationMgr().InitiateFactoryReset();
+    chip::Server::GetInstance().ScheduleFactoryReset();
     return err;
 }
 
@@ -1523,6 +1591,12 @@ static esp_err_t destroy(cluster_t *cluster)
     /* Parse and delete all events */
     SinglyLinkedList<_event_t>::delete_list(&current_cluster->event_list);
 
+    /* Free matter_attributes if allocated */
+    if (current_cluster->matter_attributes) {
+        esp_matter_mem_free(current_cluster->matter_attributes);
+        current_cluster->matter_attributes = NULL;
+    }
+
     /* Free */
     esp_matter_mem_free(current_cluster);
     return ESP_OK;
@@ -1774,8 +1848,6 @@ esp_err_t destroy(node_t *node, endpoint_t *endpoint)
         VerifyOrReturnError(endpoint_type, ESP_ERR_INVALID_STATE, ESP_LOGE(TAG, "endpoint %" PRIu16 "'s endpoint_type is NULL", current_endpoint->endpoint_id));
         int cluster_count = endpoint_type->clusterCount;
         for (int cluster_index = 0; cluster_index < cluster_count; cluster_index++) {
-            /* Free attributes */
-            esp_matter_mem_free((void *)endpoint_type->cluster[cluster_index].attributes);
             /* Free commands */
             if (endpoint_type->cluster[cluster_index].acceptedCommandList) {
                 esp_matter_mem_free((void *)endpoint_type->cluster[cluster_index].acceptedCommandList);
@@ -1815,6 +1887,10 @@ esp_err_t destroy(node_t *node, endpoint_t *endpoint)
     }
 
     /* Free */
+    if (current_endpoint->identify != NULL) {
+        chip::Platform::Delete(current_endpoint->identify);
+        current_endpoint->identify = NULL;
+    }
     esp_matter_mem_free(current_endpoint);
     return ESP_OK;
 }
@@ -1878,7 +1954,8 @@ esp_err_t add_device_type(endpoint_t *endpoint, uint32_t device_type_id, uint8_t
 {
     VerifyOrReturnError(endpoint, ESP_ERR_INVALID_ARG, ESP_LOGE(TAG, "Endpoint cannot be NULL"));
     _endpoint_t *current_endpoint = (_endpoint_t *)endpoint;
-    VerifyOrReturnError(current_endpoint->device_type_count < ESP_MATTER_MAX_DEVICE_TYPE_COUNT, ESP_FAIL, ESP_LOGE(TAG, "Could not add a new device type to the endpoint"));
+    VerifyOrReturnError(current_endpoint->device_type_count < ESP_MATTER_MAX_DEVICE_TYPE_COUNT, ESP_FAIL,
+                        ESP_LOGE(TAG, "Could not add a new device-type:%" PRIu32 " to the endpoint", device_type_id));
     current_endpoint->device_type_ids[current_endpoint->device_type_count] = device_type_id;
     current_endpoint->device_type_versions[current_endpoint->device_type_count] = device_type_version;
     current_endpoint->device_type_count++;
@@ -1912,10 +1989,7 @@ esp_err_t set_parent_endpoint(endpoint_t *endpoint, endpoint_t *parent_endpoint)
 
 void *get_priv_data(uint16_t endpoint_id)
 {
-    node_t *node = node::get();
-    /* This is not an error, since the node will not be initialized for application using the data model from zap */
-    VerifyOrReturnValue(node, NULL, ESP_LOGE(TAG, "Node not found"));
-    endpoint_t *endpoint = get(node, endpoint_id);
+    endpoint_t *endpoint = get(endpoint_id);
     VerifyOrReturnValue(endpoint, NULL, ESP_LOGE(TAG, "Endpoint not found"));
     _endpoint_t *current_endpoint = (_endpoint_t *)endpoint;
     return current_endpoint->priv_data;
@@ -1923,9 +1997,7 @@ void *get_priv_data(uint16_t endpoint_id)
 
 esp_err_t set_priv_data(uint16_t endpoint_id, void *priv_data)
 {
-    node_t *node = node::get();
-    VerifyOrReturnError(node, ESP_ERR_INVALID_STATE, ESP_LOGE(TAG, "Node is not initialized"));
-    endpoint_t *endpoint = get(node, endpoint_id);
+    endpoint_t *endpoint = get(endpoint_id);
     VerifyOrReturnError(endpoint, ESP_ERR_NOT_FOUND, ESP_LOGE(TAG, "Endpoint not found"));
     _endpoint_t *current_endpoint = (_endpoint_t *)endpoint;
     current_endpoint->priv_data = priv_data;
@@ -1934,9 +2006,7 @@ esp_err_t set_priv_data(uint16_t endpoint_id, void *priv_data)
 
 esp_err_t set_identify(uint16_t endpoint_id, void *identify)
 {
-    node_t *node = node::get();
-    VerifyOrReturnError(node, ESP_ERR_INVALID_ARG, ESP_LOGE(TAG, "Node not found"));
-    endpoint_t *endpoint = get(node, endpoint_id);
+    endpoint_t *endpoint = get(endpoint_id);
     VerifyOrReturnError(endpoint, ESP_ERR_INVALID_ARG, ESP_LOGE(TAG, "Endpoint not found"));
     _endpoint_t *current_endpoint = (_endpoint_t *)endpoint;
     current_endpoint->identify = (Identify *)identify;
@@ -1955,9 +2025,144 @@ node_t *create_raw()
     return (node_t *)node;
 }
 
+esp_err_t destroy_raw()
+{
+    VerifyOrReturnError(node, ESP_ERR_INVALID_STATE, ESP_LOGE(TAG, "NULL node cannot be destroyed"));
+    _node_t *current_node = (_node_t *)node;
+    esp_matter_mem_free(current_node);
+    node = NULL;
+    return ESP_OK;
+}
+
 node_t *get()
 {
     return (node_t *)node;
+}
+
+esp_err_t destroy()
+{
+    esp_err_t err = ESP_OK;
+    node_t *current_node = get();
+    VerifyOrReturnError(current_node, ESP_ERR_INVALID_STATE, ESP_LOGE(TAG, "Node cannot be NULL"));
+
+    attribute::set_callback(nullptr);
+    identification::set_callback(nullptr);
+
+    endpoint_t *current_endpoint = endpoint::get_first(current_node);
+    endpoint_t *next_endpoint = nullptr;
+    while (current_endpoint != nullptr) {
+        next_endpoint = endpoint::get_next(current_endpoint);
+        // Endpoints should have destroyable flag set to true before destroying
+        ((_endpoint_t *)current_endpoint)->flags |= ENDPOINT_FLAG_DESTROYABLE;
+        err = endpoint::destroy((node_t *)current_node, current_endpoint);
+        VerifyOrDo(err == ESP_OK, ESP_LOGE(TAG, "Failed to destroy endpoint"));
+
+        current_endpoint = next_endpoint;
+    }
+
+    return destroy_raw();
+}
+
+// Treat 0xFFFF'FFFF as wildcard cluster
+static inline bool is_wildcard_cluster_id(uint32_t cluster_id)
+{
+    return cluster_id == chip::kInvalidClusterId;
+}
+
+// Treat 0xFFFF as wildcard endpoint
+static inline bool is_wildcard_endpoint_id(uint16_t endpoint_id)
+{
+    return endpoint_id == chip::kInvalidEndpointId;
+}
+
+/**
+ * @brief Get the number of clusters that match the given flags
+ *
+ * @param endpoint_id: The endpoint ID to check, 0xFFFF is treated as wildcard endpoint id
+ * @param cluster_id: The cluster ID to check, 0xFFFF is treated as wildcard cluster id
+ * @param cluster_flags: The flags to check
+ * @return The number of clusters that match the given flags
+ */
+static uint32_t get_cluster_count(uint32_t endpoint_id, uint32_t cluster_id, uint8_t cluster_flags)
+{
+    uint32_t count = 0;
+    node_t *node = get();
+    VerifyOrReturnValue(node, count, ESP_LOGE(TAG, "Node cannot be NULL"));
+
+    // lambda to check if cluster matches flags and return 1 if it does, 0 otherwise
+    auto check_cluster_flags = [cluster_flags](const endpoint_t *endpoint, const cluster_t *cluster) -> uint32_t {
+        if (cluster && endpoint) {
+            const _endpoint_t *_endpoint = (_endpoint_t *)endpoint;
+            const _cluster_t *_cluster = (_cluster_t *)cluster;
+            EmberAfClusterMask flags = _endpoint->endpoint_type->cluster[_cluster->index].mask;
+            return (flags & cluster_flags) ? 1 : 0;
+        }
+        return 0;
+    };
+
+    // lambda to count all matching clusters for an endpoint
+    auto get_count_on_all_clusters = [&check_cluster_flags](endpoint_t *endpoint) -> uint32_t {
+        uint32_t result = 0;
+        if (!endpoint) return result;
+
+        cluster_t *cluster = cluster::get_first(endpoint);
+        while (cluster) {
+            result += check_cluster_flags(endpoint, cluster);
+            cluster = cluster::get_next(cluster);
+        }
+        return result;
+    };
+
+    // lambda to find and count a specific cluster
+    auto get_count_on_specific_cluster = [&check_cluster_flags](const endpoint_t *endpoint, uint32_t cluster_id) -> uint32_t {
+        if (!endpoint) return 0;
+        cluster_t *cluster = cluster::get((endpoint_t *)endpoint, cluster_id);
+        return check_cluster_flags(endpoint, cluster);
+    };
+
+    // Case 1: Wildcard endpoint
+    if (is_wildcard_endpoint_id(endpoint_id)) {
+        endpoint_t *endpoint = endpoint::get_first(node);
+        while (endpoint) {
+            // Case 1.1: Wildcard cluster - count all clusters with matching flags
+            if (is_wildcard_cluster_id(cluster_id)) {
+                count += get_count_on_all_clusters(endpoint);
+            }
+            // Case 1.2: Specific cluster - count if it exists and has matching flags
+            else {
+                count += get_count_on_specific_cluster(endpoint, cluster_id);
+            }
+            endpoint = endpoint::get_next(endpoint);
+        }
+    }
+    // Case 2: Specific endpoint
+    else {
+        endpoint_t *endpoint = endpoint::get(endpoint_id);
+        if (!endpoint) {
+            return count;
+        }
+
+        // Case 2.1: Wildcard cluster - count all clusters with matching flags
+        if (is_wildcard_cluster_id(cluster_id)) {
+            count += get_count_on_all_clusters(endpoint);
+        }
+        // Case 2.2: Specific cluster - count if it exists and has matching flags
+        else {
+            count += get_count_on_specific_cluster(endpoint, cluster_id);
+        }
+    }
+
+    return count;
+}
+
+uint32_t get_server_cluster_endpoint_count(uint32_t cluster_id)
+{
+    return get_cluster_count(chip::kInvalidEndpointId, cluster_id, CLUSTER_FLAG_SERVER);
+}
+
+uint32_t get_client_cluster_endpoint_count(uint32_t cluster_id)
+{
+    return get_cluster_count(chip::kInvalidEndpointId, cluster_id, CLUSTER_FLAG_CLIENT);
 }
 
 } /* node */

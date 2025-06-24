@@ -21,6 +21,7 @@
 #include <esp_matter_controller_commissioning_window_opener.h>
 #include <esp_matter_controller_console.h>
 #include <esp_matter_controller_group_settings.h>
+#include <esp_matter_controller_icd_client.h>
 #include <esp_matter_controller_pairing_command.h>
 #include <esp_matter_controller_read_command.h>
 #include <esp_matter_controller_subscribe_command.h>
@@ -174,7 +175,7 @@ static bool convert_hex_str_to_bytes(const char *hex_str, uint8_t *bytes, uint8_
 #if CONFIG_ESP_MATTER_COMMISSIONER_ENABLE
 static esp_err_t controller_pairing_handler(int argc, char **argv)
 {
-    VerifyOrReturnError(argc >= 3 && argc <= 6, ESP_ERR_INVALID_ARG);
+    VerifyOrReturnError(argc >= 2 && argc <= 6, ESP_ERR_INVALID_ARG);
     esp_err_t result = ESP_ERR_INVALID_ARG;
 
     if (strncmp(argv[0], "onnetwork", sizeof("onnetwork")) == 0) {
@@ -260,6 +261,10 @@ static esp_err_t controller_pairing_handler(int argc, char **argv)
 
         result = controller::pairing_code_wifi_thread(nodeId, ssid, password, payload, dataset_tlvs_buf,
                                                       dataset_tlvs_len);
+    } else if (strncmp(argv[0], "unpair", sizeof("unpair")) == 0) {
+        VerifyOrReturnError(argc == 2, ESP_ERR_INVALID_ARG);
+        uint64_t node_id = string_to_uint64(argv[1]);
+        result = controller::unpair_device(node_id);
     }
 
     if (result != ESP_OK) {
@@ -499,7 +504,7 @@ static esp_err_t controller_read_event_handler(int argc, char **argv)
 
 static esp_err_t controller_subscribe_attr_handler(int argc, char **argv)
 {
-    if (argc != 6) {
+    if (argc < 6) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -513,13 +518,23 @@ static esp_err_t controller_subscribe_attr_handler(int argc, char **argv)
     uint16_t min_interval = string_to_uint16(argv[4]);
     uint16_t max_interval = string_to_uint16(argv[5]);
 
+    bool keep_subscription = true;
+    if (argc >= 7) {
+        keep_subscription = string_to_bool(argv[6]);
+    }
+
+    bool auto_resubscribe = true;
+    if (argc >= 8) {
+        auto_resubscribe = string_to_bool(argv[7]);
+    }
+
     return controller::send_subscribe_attr_command(node_id, endpoint_ids, cluster_ids, attribute_ids, min_interval,
-                                                   max_interval);
+                                                   max_interval, keep_subscription, auto_resubscribe);
 }
 
 static esp_err_t controller_subscribe_event_handler(int argc, char **argv)
 {
-    if (argc != 6) {
+    if (argc < 6) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -532,8 +547,18 @@ static esp_err_t controller_subscribe_event_handler(int argc, char **argv)
     ESP_RETURN_ON_ERROR(string_to_uint32_array(argv[3], event_ids), TAG, "Failed to parse event IDs");
     uint16_t min_interval = string_to_uint16(argv[4]);
     uint16_t max_interval = string_to_uint16(argv[5]);
+
+    bool keep_subscription = true;
+    if (argc >= 7) {
+        keep_subscription = string_to_bool(argv[6]);
+    }
+
+    bool auto_resubscribe = true;
+    if (argc >= 8) {
+        auto_resubscribe = string_to_bool(argv[7]);
+    }
     return controller::send_subscribe_event_command(node_id, endpoint_ids, cluster_ids, event_ids, min_interval,
-                                                    max_interval);
+                                                    max_interval, keep_subscription, auto_resubscribe);
 }
 
 static esp_err_t controller_shutdown_subscription_handler(int argc, char **argv)
@@ -565,6 +590,15 @@ static esp_err_t controller_shutdown_all_subscriptions_handler(int argc, char **
     return ESP_OK;
 }
 
+static esp_err_t controller_icd_list_handler(int argc, char **argv)
+{
+    if (argc != 1 || strncmp(argv[0], "list", sizeof("list")) != 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    controller::list_registered_icd();
+    return ESP_OK;
+}
+
 static esp_err_t controller_dispatch(int argc, char **argv)
 {
     if (argc == 0) {
@@ -585,7 +619,7 @@ esp_err_t controller_register_commands()
 #if CONFIG_ESP_MATTER_COMMISSIONER_ENABLE
         {
             .name = "pairing",
-            .description = "Pairing a node.\n"
+            .description = "Commands for commissioning/unpair nodes.\n"
                            "\tUsage: controller pairing onnetwork <nodeid> <pincode> OR\n"
                            "\tcontroller pairing ble-wifi <nodeid> <ssid> <password> <pincode> <discriminator> OR\n"
                            "\tcontroller pairing ble-thread <nodeid> <dataset> <pincode> <discriminator> OR\n"
@@ -593,7 +627,8 @@ esp_err_t controller_register_commands()
                            "\tcontroller pairing code <nodeid> <payload> OR\n"
                            "\tcontroller pairing code-wifi <nodeid> <ssid> <password> <payload> OR\n"
                            "\tcontroller pairing code-thread <nodeid> <dataset> <payload> OR\n"
-                           "\tcontroller pairing code-wifi-thread <nodeid> <ssid> <password> <dataset> <payload>",
+                           "\tcontroller pairing code-wifi-thread <nodeid> <ssid> <password> <dataset> <payload> OR\n"
+                           "\tcontroller pairing unpair <nodeid>",
             .handler = controller_pairing_handler,
         },
         {
@@ -601,6 +636,12 @@ esp_err_t controller_register_commands()
             .description = "Managing the groups and keysets of the controller.\n"
                            "\tUsage: controller group-settings <sub-commands>",
             .handler = controller_group_settings_handler,
+        },
+        {
+            .name = "icd",
+            .description = "icd client management.\n"
+                           "\tUsage: controller icd list",
+            .handler = controller_icd_list_handler,
         },
 #if CHIP_DEVICE_CONFIG_ENABLE_COMMISSIONER_DISCOVERY
         {
@@ -669,14 +710,17 @@ esp_err_t controller_register_commands()
             .name = "subs-attr",
             .description = "Subscribe attributes of the nodes.\n"
                            "\tUsage: controller subs-attr <node-id> <endpoint-ids> <cluster-ids> <attr-ids> "
-                           "<min-interval> <max-interval>",
+                           "<min-interval> <max-interval> [keep-subscription] [auto-resubscribe]\n"
+                           "\tNotes: If 'keep-subscription' is 'false', existing subscriptions will be terminated for the node. "
+                           "If 'auto-resubscribe' is 'true', controller will auto resubscribe if subscriptions timeout",
             .handler = controller_subscribe_attr_handler,
         },
         {
             .name = "subs-event",
             .description = "Subscribe events of the nodes.\n"
                            "\tUsage: controller subs-event <node-id> <endpoint-ids> <cluster-ids> <event-ids> "
-                           "<min-interval> <max-interval>",
+                           "<min-interval> <max-interval> [keep-subscription] [auto-resubscribe]\n"
+                           "\tNotes: 'keep-subscription' and 'auto-resubscribe' are the same as 'subs-attr' command",
             .handler = controller_subscribe_event_handler,
         },
         {

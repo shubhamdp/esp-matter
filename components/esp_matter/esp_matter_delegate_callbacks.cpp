@@ -41,6 +41,11 @@
 #include <app/clusters/water-heater-management-server/water-heater-management-server.h>
 #include <app/clusters/energy-preference-server/energy-preference-server.h>
 #include <app/clusters/commissioner-control-server/commissioner-control-server.h>
+#include <app/clusters/actions-server/actions-server.h>
+#include <app/clusters/thermostat-server/thermostat-server.h>
+#include <app/clusters/ota-provider/ota-provider-cluster.h>
+#include <app/clusters/ota-provider/CodegenIntegration.h>
+#include <app/clusters/diagnostic-logs-server/diagnostic-logs-server.h>
 
 using namespace chip::app::Clusters;
 namespace esp_matter {
@@ -48,11 +53,8 @@ namespace cluster {
 
 static uint32_t get_feature_map_value(uint16_t endpoint_id, uint32_t cluster_id)
 {
-    node_t *node = node::get();
-    endpoint_t *endpoint = endpoint::get(node, endpoint_id);
-    cluster_t *cluster = cluster::get(endpoint, cluster_id);
     uint32_t attribute_id = Globals::Attributes::FeatureMap::Id;
-    attribute_t *attribute = attribute::get(cluster, attribute_id);
+    attribute_t *attribute = attribute::get(endpoint_id, cluster_id, attribute_id);
 
     esp_matter_attr_val_t val = esp_matter_invalid(NULL);
     attribute::get_val(attribute, &val);
@@ -130,11 +132,9 @@ void EnergyEvseDelegateInitCB(void *delegate, uint16_t endpoint_id)
 void MicrowaveOvenControlDelegateInitCB(void *delegate, uint16_t endpoint_id)
 {
     // Get delegates of MicrowaveOvenMode and OperationalState clusters.
-    node_t *node = node::get();
-    endpoint_t *endpoint = endpoint::get(node, endpoint_id);
-    cluster_t *cluster = cluster::get(endpoint, MicrowaveOvenMode::Id);
+    cluster_t *cluster = cluster::get(endpoint_id, MicrowaveOvenMode::Id);
     ModeBase::Delegate *microwave_oven_mode_delegate = static_cast<ModeBase::Delegate*>(get_delegate_impl(cluster));
-    cluster = cluster::get(endpoint, OperationalState::Id);
+    cluster = cluster::get(endpoint_id, OperationalState::Id);
     OperationalState::Delegate *operational_state_delegate = static_cast<OperationalState::Delegate*>(get_delegate_impl(cluster));
     VerifyOrReturn(delegate != nullptr && microwave_oven_mode_delegate != nullptr && operational_state_delegate != nullptr);
     // Create instances of clusters.
@@ -304,10 +304,8 @@ void ModeSelectDelegateInitCB(void *delegate, uint16_t endpoint_id)
 void ThreadBorderRouterManagementDelegateInitCB(void *delegate, uint16_t endpoint_id)
 {
     assert(delegate != nullptr);
-    esp_matter::cluster_t *cluster = esp_matter::cluster::get(endpoint_id, ThreadBorderRouterManagement::Id);
-    assert(cluster != nullptr);
     /* Get the attribute */
-    attribute_t *attribute = attribute::get(cluster, Globals::Attributes::FeatureMap::Id);
+    attribute_t *attribute = attribute::get(endpoint_id, ThreadBorderRouterManagement::Id, Globals::Attributes::FeatureMap::Id);
     assert(attribute != nullptr);
     /* Update the value if the attribute already exists */
     esp_matter_attr_val_t val = esp_matter_invalid(NULL);
@@ -357,8 +355,38 @@ void CommissionerControlDelegateInitCB(void *delegate, uint16_t endpoint_id)
     CommissionerControl::Delegate *commissioner_control_delegate = static_cast<CommissionerControl::Delegate*>(delegate);
     CommissionerControl::CommissionerControlServer *commissioner_control_instance = nullptr;
     commissioner_control_instance =
-        new CommissionerControl::CommissionerControlServer(commissioner_control_delegate, endpoint_id, CommissionerControl::Id);
+        new CommissionerControl::CommissionerControlServer(commissioner_control_delegate, endpoint_id);
     commissioner_control_instance->Init();
+}
+
+void ActionsDelegateInitCB(void *delegate, uint16_t endpoint_id)
+{
+    VerifyOrReturn(delegate != nullptr);
+    static Actions::ActionsServer *actionsServer = nullptr;
+    Actions::Delegate *actions_delegate = static_cast<Actions::Delegate*>(delegate);
+    actionsServer = new Actions::ActionsServer(endpoint_id, *actions_delegate);
+    actionsServer->Init();
+}
+
+
+void ThermostatDelegateInitCB(void *delegate, uint16_t endpoint_id)
+{
+    VerifyOrReturn(delegate != nullptr);
+    Thermostat::Delegate *thermostat_delegate = static_cast<Thermostat::Delegate*>(delegate);
+    Thermostat::SetDefaultDelegate(endpoint_id, thermostat_delegate);
+}
+
+void OtaProviderDelegateInitCB(void *delegate, uint16_t endpoint_id)
+{
+    VerifyOrReturn(delegate != nullptr);
+    chip::app::Clusters::OTAProvider::SetDelegate(endpoint_id, static_cast<chip::app::Clusters::OTAProviderDelegate *>(delegate));
+}
+
+void DiagnosticLogsDelegateInitCB(void *delegate, uint16_t endpoint_id)
+{
+    VerifyOrReturn(delegate != nullptr);
+    DiagnosticLogs::DiagnosticLogsProviderDelegate *diagnostic_logs_delegate = static_cast<DiagnosticLogs::DiagnosticLogsProviderDelegate*>(delegate);
+    DiagnosticLogs::DiagnosticLogsServer::Instance().SetDiagnosticLogsProviderDelegate(endpoint_id, diagnostic_logs_delegate);
 }
 
 } // namespace delegate_cb

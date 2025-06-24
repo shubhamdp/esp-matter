@@ -75,11 +75,11 @@ command_t *create_reset_counts(cluster_t *cluster);
 } /* command */
 } /* thread_network_diagnostics */
 
-namespace wifi_network_diagnotics {
+namespace wifi_network_diagnostics {
 namespace command {
 command_t *create_reset_counts(cluster_t *cluster);
 } /* command */
-} /* wifi_network_diagnotics */
+} /* wifi_network_diagnostics */
 
 namespace ethernet_network_diagnostics {
 namespace command {
@@ -168,6 +168,9 @@ command_t *create_attestation_response(cluster_t *cluster);
 command_t *create_certificate_chain_response(cluster_t *cluster);
 command_t *create_csr_response(cluster_t *cluster);
 command_t *create_noc_response(cluster_t *cluster);
+command_t *create_set_vid_verification_statement(cluster_t *cluster);
+command_t *create_sign_vid_verification_request(cluster_t *cluster);
+command_t *create_sign_vid_verification_response(cluster_t *cluster);
 } /* command */
 } /* operational_credentials */
 

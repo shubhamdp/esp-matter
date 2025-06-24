@@ -15,7 +15,7 @@ This section talks about setting up ESP-IDF.
 You should install drivers and support packages for your development
 host. Linux and Mac OS-X are the supported development hosts in Matter, the recommended host versions:
 
-- Ubuntu 20.04 or 22.04 LTS
+- Ubuntu 20.04 or 22.04 or 24.04 LTS
 - macOS 10.15 or later
 
 Additionally, we also support developing on Windows Host using WSL.
@@ -30,8 +30,8 @@ Development on Windows is supported using Windows Subsystem for Linux (WSL). Ple
 - Install Ubuntu 20.04 or 22.04 from the `Windows App Store <https://apps.microsoft.com/store/search/Ubuntu>`__.
 - Start Ubuntu (search into start menu) and run command ``uname -a``, it should report a kernel version of ``5.10.60.1`` or later.
   If not please upgrade the WSL2. To upgrade the kernel, run ``wsl --upgrade`` from Windows Power Shell.
-- Windows does not support exposing COM ports to WSL distros. Install usbipd-win on `Windows <https://github.com/dorssel/usbipd-win>`__
-  and `WSL <https://github.com/espressif/vscode-esp-idf-extension/blob/master/docs/WSL.md#usbipd>`__ (usbipd-win `WSL Support <https://github.com/dorssel/usbipd-win/wiki/WSL-support>`__).
+- Windows does not support exposing COM ports to WSL distros. Install `usbipd-win`_
+  and `WSL`_ (`usbipd-win WSL Support`_).
 - Here onwards process for setting esp-matter and building examples is same as other hosts.
 - Please clone the repositories from inside the WSL environment and not inside a mounted directory.
 
@@ -52,20 +52,36 @@ The Prerequisites for ESP-IDF:
 
 - Please get the `Prerequisites for ESP-IDF`_. For beginners, please check `step by step installation guide`_ for esp-idf.
 
+.. only:: esp32c5
+
+    - For ``ESP32C5``, the IDF version should be `98cd765953 <https://github.com/espressif/esp-idf/commit/98cd765953dfe0e7bb1c5df8367e1b54bd966cce>`__ or newer.
+
 .. note::
 
     ``git clone`` command accepts the optional argument ``--jobs N``, which can significantly speed up the
     process by parallelizing submodule cloning. Consider using this option when cloning repositories.
 
-Cloning esp-idf:
+.. only:: not esp32c5
 
-   ::
+   Cloning esp-idf:
 
-      git clone --recursive https://github.com/espressif/esp-idf.git
-      cd esp-idf; git checkout v5.2.3; git submodule update --init --recursive;
-      ./install.sh
-      cd ..
+      ::
 
+         git clone --recursive https://github.com/espressif/esp-idf.git
+         cd esp-idf; git checkout v5.4.1; git submodule update --init --recursive;
+         ./install.sh
+         cd ..
+
+.. only:: esp32c5
+
+   Cloning esp-idf:
+
+      ::
+
+         git clone --recursive https://github.com/espressif/esp-idf.git
+         cd esp-idf; git checkout 98cd765953; git submodule update --init --recursive;
+         ./install.sh
+         cd ..
 
 2.1.3 Configuring the Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -201,7 +217,7 @@ To add the esp_matter component to your project, run:
 
 ::
 
-   idf.py add-dependency "espressif/esp_matter^0.0.2"
+   idf.py add-dependency "espressif/esp_matter^1.4.0"
 
 An example with esp_matter component is offered:
 
@@ -209,8 +225,9 @@ An example with esp_matter component is offered:
 
 .. note::
 
-    To use this component, the version of IDF component management should be 1.4.*.
-    Use ``compote version`` to show the version. Use ``pip install 'idf-component-manager~=1.4.0'`` to install.
+    To use this component, the version of IDF component management should be ``1.4.*`` or ``>= 2.0``.
+    Use ``compote version`` to show the version. Use ``pip install 'idf-component-manager~=1.4.0'``
+    or ``pip install 'idf-component-manager~=2.0.0'`` to install.
 
 2.2.3 Building Applications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -262,6 +279,12 @@ Choose IDF target.
 
       idf.py set-target esp32c6
 
+.. only:: esp32c5
+
+   ::
+
+      idf.py --preview set-target esp32c5
+
 .. only:: esp32p4
 
    ::
@@ -298,9 +321,9 @@ Choose IDF target.
             idf.py -C managed_components/espressif__esp_hosted/slave/ -B build_slave set-target esp32c6
             idf.py -C managed_components/espressif__esp_hosted/slave/ -B build_slave build flash monitor
 
-.. only:: esp32c6
+.. only:: esp32c5 or esp32c6
 
-    -  ESP32-C6 supports both the Wi-Fi and IEEE 802.15.4 radio, so you can run Wi-Fi or Thread matter example on it.
+    -  {IDF_TARGET_NAME} supports both the Wi-Fi and IEEE 802.15.4 radio, so you can run Wi-Fi or Thread matter example on it.
 
         -  To enable Thread, you should change the menuconfig options to ``CONFIG_OPENTHREAD_ENABLED=y``, ``CONFIG_ENABLE_WIFI_STATION=n``, and  ``CONFIG_USE_MINIMAL_MDNS=n``.
         -  To enable Wi-Fi. you should change the menuconfig options to ``CONFIG_OPENTHREAD_ENABLED=n``, ``CONFIG_ENABLE_WIFI_STATION=y``, and ``CONFIG_USE_MINIMAL_MDNS=y``.
@@ -328,13 +351,16 @@ Choose IDF target.
 2.3 Commissioning and Control
 -----------------------------
 
-There are a few implementations of Matter commissioners present in the `connectedhomeip <https://github.com/espressif/connectedhomeip/tree/v1.0.0.2/src/controller#implementations>`__ repository.
+There are a few implementations of Matter commissioners present in the `connectedhomeip`_ repository.
 
 CHIP Tool is an example implementation of Matter commissioner and used for development purposes.
-An in-depth guide on how to use chip-tool can be found in the
-`CHIP Tool User Guide <https://github.com/project-chip/connectedhomeip/blob/master/docs/development_controllers/chip-tool/chip_tool_guide.md>`__.
+An in-depth guide on how to use chip-tool can be found in the `CHIP Tool User Guide`_.
 
-Espressif also has an iOS application, `Espressif-Matter <https://apps.apple.com/in/app/espressif-matter/id1604739172>`__, to commission and control the Matter devices. Please follow `profile installation instructions <https://github.com/espressif/connectedhomeip/blob/v1.0.0.2/docs/guides/darwin.md#profile-installation>`__ in order to use the application. Also, make sure to enable Developer Mode on the iOS.
+Espressif's ESP RainMaker iOS and Android applications support commissioning and control of Matter devices.
+
+- `ESP-RainMaker Android App`_
+- `ESP-RainMaker iOS App`_
+
 
 2.3.1 Test Setup (CHIP Tool)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -355,7 +381,7 @@ Use ``chip-tool`` in interactive mode to commission the device:
    chip-tool interactive start
 
 
-.. only:: esp32 or esp32s3 or esp32c3 or esp32c2 or esp32c6 or esp32p4
+.. only:: esp32 or esp32s3 or esp32c3 or esp32c2 or esp32c6 or esp32p4 or esp32c5
 
    ::
 
@@ -365,7 +391,7 @@ Use ``chip-tool`` in interactive mode to commission the device:
 
     or
 
-.. only:: esp32h2 or esp32c6
+.. only:: esp32h2 or esp32c6 or esp32c5
 
    ::
 
@@ -382,7 +408,7 @@ Above method commissions the device using setup passcode and discriminator. Devi
 
 To Commission the device using manual pairing code 34970112332
 
-.. only:: esp32 or esp32s3 or esp32c3 or esp32c2 or esp32c6 or esp32p4
+.. only:: esp32 or esp32s3 or esp32c3 or esp32c2 or esp32c6 or esp32p4 or esp32c5
 
     ::
 
@@ -392,7 +418,7 @@ To Commission the device using manual pairing code 34970112332
 
     or
 
-.. only:: esp32h2 or esp32c6
+.. only:: esp32h2 or esp32c6 or esp32c5
 
     ::
 
@@ -409,7 +435,7 @@ Above default manual pairing code contains following values:
 
 To commission the device using QR code MT:Y.K9042C00KA0648G00
 
-.. only:: esp32 or esp32s3 or esp32c3 or esp32c2 or esp32c6 or esp32p4
+.. only:: esp32 or esp32s3 or esp32c3 or esp32c2 or esp32c6 or esp32p4 or esp32c5
 
     ::
 
@@ -419,7 +445,7 @@ To commission the device using QR code MT:Y.K9042C00KA0648G00
 
     or
 
-.. only:: esp32h2 or esp32c6
+.. only:: esp32h2 or esp32c6 or esp32c5
 
     ::
 
@@ -492,7 +518,7 @@ Use the cluster commands to control the attributes.
 
 chip-tool when used in interactive mode uses CASE resumption as against establishing CASE for cluster control commands. This results into shorter execution times, thereby improving the overall experience.
 
-For more details on chip-tool usage, check https://github.com/espressif/connectedhomeip/tree/v1.0.0.2/examples/chip-tool
+For more details about the commands, please check `chip-tool usage guide`_
 
 2.4 Device console
 ------------------
@@ -567,7 +593,7 @@ Additional Matter specific commands:
 
       matter esp wifi connect <ssid> <password>
 
-.. only:: esp32h2 or esp32c6
+.. only:: esp32h2 or esp32c6 or esp32c5
 
    -  OpenThread command line:
 
@@ -792,6 +818,7 @@ Additional clusters can also be added to an endpoint. Examples:
    ::
 
       on_off::config_t on_off_config;
+      on_off_config.feature_flags = on_off::feature::lighting::get_id();
       cluster_t *cluster = on_off::create(endpoint, &on_off_config, CLUSTER_FLAG_SERVER, on_off::feature::lighting::get_id());
 
 -  temperature_measurement:
@@ -1093,7 +1120,7 @@ We need to generate the new CD because it SHALL match the VID, PID in DAC and th
     ninja -C build
 
 Generate the Test CD, please make sure to change the ``-V`` (vendor_id) and ``-p`` (product-id) options based on the ones that are being used.
-For more info about the arguments, please check `here <https://github.com/espressif/connectedhomeip/tree/v1.0.0.2/src/tools/chip-cert#gen-cd>`__.
+For more info about the arguments, please check `chip-cert's gen-cd command`_ in the connectedhomeip repository.
 
 ::
 
@@ -1107,7 +1134,13 @@ For more info about the arguments, please check `here <https://github.com/espres
 2.7.3 Factory Partition
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Factory partition contains basic information like VID, PID, etc, and CD.
+Factory partition contains basic information like VID, PID, etc.
+
+By default, the CD(Certification Declaration) is stored in the factory partition and we need to add the ``-cd`` option when generating the factory partition.
+
+Alternatively, if you’d like to embed the CD in the firmware, you can enable the
+``CONFIG_ENABLE_SET_CERT_DECLARATION_API`` option and use the ``SetCertificationDeclaration()`` API to set the CD.
+You can refer to the reference implementation in :project_file: `light example <https://github.com/espressif/esp-matter/tree/main/examples/light>`__.
 
 Export the dependent tools path
 
@@ -1189,7 +1222,7 @@ Run the following command from host to commission the device.
 
 - Enable the ``CONFIG_ENABLE_OTA_REQUESTOR`` option to enable Matter OTA Requestor functionality.
 
-Please follow the `guide <https://github.com/project-chip/connectedhomeip/blob/master/docs/guides/esp32/ota.md>`__
+Please follow the `OTA guide`_
 in the connectedhomeip repository for generating a Matter OTA image and performing OTA.
 
 2.8.1 Encrypted Matter OTA
@@ -1214,7 +1247,7 @@ Please follow the steps below to enable and use encrypted application images for
     }
 
 
-- Please refer to the `guide <https://github.com/project-chip/connectedhomeip/blob/master/docs/guides/esp32/ota.md#encrypted-ota>`__
+- Please refer to the `encrypted OTA guide`_
   in the connectedhomeip repository for instructions on how to generate a private key, encrypted OTA image, and Matter OTA image.
 
 .. note::
@@ -1685,9 +1718,21 @@ To enable these functions, the cluster should be added to the appropriate entry 
   If the example uses ESP-Matter APIs to define its data model, the custom data model should be created and added to the data model using the esp-matter APIs, following the instructions in `Adding custom data model fields <./developing.html#adding-custom-data-model-fields>`__
 
 .. _`step by step installation guide`: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html
-.. _`Prerequisites for ESP-IDF`: https://docs.espressif.com/projects/esp-idf/en/v5.0.1/esp32/get-started/index.html#step-1-install-prerequisites
-.. _`Prerequisites for Matter`: https://github.com/espressif/connectedhomeip/blob/v1.1-branch/docs/guides/BUILDING.md#prerequisites
+.. _`Prerequisites for ESP-IDF`: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#installation
+.. _`Prerequisites for Matter`: https://github.com/project-chip/connectedhomeip/tree/master/docs/guides/BUILDING.md#prerequisites
 .. _`esp-matter-mfg-tool`: https://github.com/espressif/esp-matter-tools/tree/main/mfg_tool
 .. _`zcl configuration file`: https://github.com/project-chip/connectedhomeip/blob/master/src/app/zap-templates/zcl/zcl.json
 .. _`zcl test configuration file`: https://github.com/project-chip/connectedhomeip/blob/master/src/app/zap-templates/zcl/zcl-with-test-extensions.json
-.. _`zap configuration data`: <https://github.com/project-chip/connectedhomeip/blob/master/src/app/common/templates/config-data.yaml>
+.. _`zap configuration data`: https://github.com/project-chip/connectedhomeip/blob/master/src/app/common/templates/config-data.yaml
+.. _`ESP-Rainmaker iOS App`: https://apps.apple.com/app/esp-rainmaker/id1497491540
+.. _`ESP-Rainmaker Android App`: https://play.google.com/store/apps/details?id=com.espressif.rainmaker
+.. _`connectedhomeip`: https://github.com/project-chip/connectedhomeip
+.. _`CHIP Tool User Guide`: https://github.com/project-chip/connectedhomeip/blob/master/docs/development_controllers/chip-tool/chip_tool_guide.md
+.. _`profile installation instructions`: https://github.com/project-chip/connectedhomeip/blob/master/docs/guides/darwin.md#profile-installation
+.. _`OTA guide`: https://github.com/project-chip/connectedhomeip/blob/master/docs/platforms/esp32/ota.md
+.. _`encrypted OTA guide`: https://github.com/project-chip/connectedhomeip/blob/master/docs/platforms/esp32/ota.md#encrypted-ota
+.. _`chip-cert's gen-cd command`: https://github.com/espressif/connectedhomeip/tree/v1.0.0.2/src/tools/chip-cert#gen-cd
+.. _usbipd-win: https://github.com/dorssel/usbipd-win
+.. _WSL: https://docs.espressif.com/projects/vscode-esp-idf-extension/en/latest/additionalfeatures/wsl.html#usbipd-win-in-wsl
+.. _`usbipd-win WSL Support`: https://github.com/dorssel/usbipd-win/wiki/WSL-support
+.. _`chip-tool usage guide`: https://github.com/project-chip/connectedhomeip/blob/master/docs/development_controllers/chip-tool/chip_tool_guide.md

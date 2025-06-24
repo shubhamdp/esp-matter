@@ -15,6 +15,8 @@
 #include <esp_matter_ota.h>
 
 #include <common_macros.h>
+#include <log_heap_numbers.h>
+
 #include <app_priv.h>
 #include <app_reset.h>
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
@@ -23,6 +25,17 @@
 
 #include <app/server/CommissioningWindowManager.h>
 #include <app/server/Server.h>
+
+#ifdef CONFIG_ENABLE_SET_CERT_DECLARATION_API
+#include <esp_matter_providers.h>
+#include <lib/support/Span.h>
+#ifdef CONFIG_SEC_CERT_DAC_PROVIDER
+#include <platform/ESP32/ESP32SecureCertDACProvider.h>
+#elif defined(CONFIG_FACTORY_PARTITION_DAC_PROVIDER)
+#include <platform/ESP32/ESP32FactoryDataProvider.h>
+#endif
+using namespace chip::DeviceLayer;
+#endif
 
 static const char *TAG = "app_main";
 uint16_t light_endpoint_id = 0;
@@ -33,6 +46,13 @@ using namespace esp_matter::endpoint;
 using namespace chip::app::Clusters;
 
 constexpr auto k_timeout_seconds = 300;
+
+#ifdef CONFIG_ENABLE_SET_CERT_DECLARATION_API
+extern const uint8_t cd_start[] asm("_binary_certification_declaration_der_start");
+extern const uint8_t cd_end[] asm("_binary_certification_declaration_der_end");
+
+const chip::ByteSpan cdSpan(cd_start, static_cast<size_t>(cd_end - cd_start));
+#endif // CONFIG_ENABLE_SET_CERT_DECLARATION_API
 
 #if CONFIG_ENABLE_ENCRYPTED_OTA
 extern const char decryption_key_start[] asm("_binary_esp_image_encryption_key_pem_start");
@@ -51,6 +71,7 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningComplete:
         ESP_LOGI(TAG, "Commissioning complete");
+        MEMORY_PROFILER_DUMP_HEAP_STAT("commissioning complete");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFailSafeTimerExpired:
@@ -67,6 +88,7 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningWindowOpened:
         ESP_LOGI(TAG, "Commissioning window opened");
+        MEMORY_PROFILER_DUMP_HEAP_STAT("commissioning window opened");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningWindowClosed:
@@ -110,6 +132,7 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
 
     case chip::DeviceLayer::DeviceEventType::kBLEDeinitialized:
         ESP_LOGI(TAG, "BLE deinitialized and memory reclaimed");
+        MEMORY_PROFILER_DUMP_HEAP_STAT("BLE deinitialized");
         break;
 
     default:
@@ -150,6 +173,8 @@ extern "C" void app_main()
     /* Initialize the ESP NVS layer */
     nvs_flash_init();
 
+    MEMORY_PROFILER_DUMP_HEAP_STAT("Bootup");
+
     /* Initialize driver */
     app_driver_handle_t light_handle = app_driver_light_init();
     app_driver_handle_t button_handle = app_driver_button_init();
@@ -162,15 +187,21 @@ extern "C" void app_main()
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
 
+    MEMORY_PROFILER_DUMP_HEAP_STAT("node created");
+
     extended_color_light::config_t light_config;
     light_config.on_off.on_off = DEFAULT_POWER;
-    light_config.on_off.lighting.start_up_on_off = nullptr;
+    light_config.on_off.features.lighting.start_up_on_off = nullptr;
     light_config.level_control.current_level = DEFAULT_BRIGHTNESS;
     light_config.level_control.on_level = DEFAULT_BRIGHTNESS;
-    light_config.level_control.lighting.start_up_current_level = DEFAULT_BRIGHTNESS;
+    light_config.level_control.features.lighting.start_up_current_level = DEFAULT_BRIGHTNESS;
     light_config.color_control.color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
     light_config.color_control.enhanced_color_mode = (uint8_t)ColorControl::ColorMode::kColorTemperature;
-    light_config.color_control.color_temperature.startup_color_temperature_mireds = nullptr;
+    light_config.color_control.features.color_temperature.startup_color_temperature_mireds = nullptr;
+
+    light_config.on_off.feature_flags = cluster::on_off::feature::lighting::get_id();
+    light_config.level_control.feature_flags = cluster::level_control::feature::lighting::get_id();
+    light_config.color_control.feature_flags = cluster::color_control::feature::color_temperature::get_id() | cluster::color_control::feature::xy::get_id();
 
     // endpoint handles can be used to add/modify clusters.
     endpoint_t *endpoint = extended_color_light::create(node, &light_config, ENDPOINT_FLAG_NONE, light_handle);
@@ -180,16 +211,14 @@ extern "C" void app_main()
     ESP_LOGI(TAG, "Light created with endpoint_id %d", light_endpoint_id);
 
     /* Mark deferred persistence for some attributes that might be changed rapidly */
-    cluster_t *level_control_cluster = cluster::get(endpoint, LevelControl::Id);
-    attribute_t *current_level_attribute = attribute::get(level_control_cluster, LevelControl::Attributes::CurrentLevel::Id);
+    attribute_t *current_level_attribute = attribute::get(light_endpoint_id, LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id);
     attribute::set_deferred_persistence(current_level_attribute);
 
-    cluster_t *color_control_cluster = cluster::get(endpoint, ColorControl::Id);
-    attribute_t *current_x_attribute = attribute::get(color_control_cluster, ColorControl::Attributes::CurrentX::Id);
+    attribute_t *current_x_attribute = attribute::get(light_endpoint_id, ColorControl::Id, ColorControl::Attributes::CurrentX::Id);
     attribute::set_deferred_persistence(current_x_attribute);
-    attribute_t *current_y_attribute = attribute::get(color_control_cluster, ColorControl::Attributes::CurrentY::Id);
+    attribute_t *current_y_attribute = attribute::get(light_endpoint_id, ColorControl::Id, ColorControl::Attributes::CurrentY::Id);
     attribute::set_deferred_persistence(current_y_attribute);
-    attribute_t *color_temp_attribute = attribute::get(color_control_cluster, ColorControl::Attributes::ColorTemperatureMireds::Id);
+    attribute_t *color_temp_attribute = attribute::get(light_endpoint_id, ColorControl::Id, ColorControl::Attributes::ColorTemperatureMireds::Id);
     attribute::set_deferred_persistence(color_temp_attribute);
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD && CHIP_DEVICE_CONFIG_ENABLE_WIFI_STATION
@@ -210,9 +239,20 @@ extern "C" void app_main()
     set_openthread_platform_config(&config);
 #endif
 
+#ifdef CONFIG_ENABLE_SET_CERT_DECLARATION_API
+    auto * dac_provider = get_dac_provider();
+#ifdef CONFIG_SEC_CERT_DAC_PROVIDER
+    static_cast<ESP32SecureCertDACProvider *>(dac_provider)->SetCertificationDeclaration(cdSpan);
+#elif defined(CONFIG_FACTORY_PARTITION_DAC_PROVIDER)
+    static_cast<ESP32FactoryDataProvider *>(dac_provider)->SetCertificationDeclaration(cdSpan);
+#endif
+#endif // CONFIG_ENABLE_SET_CERT_DECLARATION_API
+
     /* Matter start */
     err = esp_matter::start(app_event_cb);
     ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Failed to start Matter, err:%d", err));
+
+    MEMORY_PROFILER_DUMP_HEAP_STAT("matter started");
 
     /* Starting driver with default values */
     app_driver_light_set_defaults(light_endpoint_id);
@@ -231,4 +271,9 @@ extern "C" void app_main()
 #endif
     esp_matter::console::init();
 #endif
+
+    while (true) {
+        MEMORY_PROFILER_DUMP_HEAP_STAT("Idle");
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+    }
 }

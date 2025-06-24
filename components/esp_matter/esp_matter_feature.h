@@ -323,7 +323,7 @@ typedef struct config {
     uint16_t color_temp_physical_max_mireds;
     uint16_t couple_color_temp_to_level_min_mireds;
     nullable<uint16_t> startup_color_temperature_mireds;
-    config() : color_temperature_mireds(0x00fa), color_temp_physical_min_mireds(0),
+    config() : color_temperature_mireds(0x00fa), color_temp_physical_min_mireds(1),
                color_temp_physical_max_mireds(0xfeff), couple_color_temp_to_level_min_mireds(1),
                startup_color_temperature_mireds(0x00fa) {}
 } config_t;
@@ -468,7 +468,27 @@ esp_err_t add(cluster_t *cluster, config_t *config);
 } /* feature */
 } /* window_covering */
 
-namespace wifi_network_diagnotics {
+namespace wifi_network_diagnostics {
+namespace feature {
+
+namespace packet_counts {
+
+uint32_t get_id();
+esp_err_t add(cluster_t *cluster);
+
+} /* packet_counts */
+
+namespace error_counts {
+
+uint32_t get_id();
+esp_err_t add(cluster_t *cluster);
+
+} /* error_counts */
+
+} /* feature */
+} /* wifi_network_diagnostics */
+
+namespace thread_network_diagnostics {
 namespace feature {
 
 namespace packets_counts {
@@ -485,13 +505,27 @@ esp_err_t add(cluster_t *cluster);
 
 } /* error_counts */
 
+namespace mle_counts {
+
+uint32_t get_id();
+esp_err_t add(cluster_t *cluster);
+
+} /* mle_counts */
+
+namespace mac_counts {
+
+uint32_t get_id();
+esp_err_t add(cluster_t *cluster);
+
+} /* mac_counts */
+
 } /* feature */
-} /* wifi_network_diagnotics */
+} /* thread_network_diagnostics */
 
 namespace ethernet_network_diagnostics {
 namespace feature {
 
-namespace packets_counts {
+namespace packet_counts {
 
 typedef struct config {
     uint64_t packet_rx_count;
@@ -502,7 +536,7 @@ typedef struct config {
 uint32_t get_id();
 esp_err_t add(cluster_t *cluster, config_t *config);
 
-} /* packets_counts */
+} /* packet_counts */
 
 namespace error_counts {
 
@@ -567,20 +601,6 @@ uint32_t get_id();
 esp_err_t add(cluster_t *cluster, config_t *config);
 } /* occupancy */
 
-namespace schedule_configuration {
-
-typedef struct config {
-   uint8_t start_of_week;
-   uint8_t number_of_weekly_transitions;
-   uint8_t number_of_daily_transitions;
-
-   config (): start_of_week(0), number_of_weekly_transitions(0), number_of_daily_transitions(0) {}
-} config_t;
-
-uint32_t get_id();
-esp_err_t add(cluster_t *cluster, config_t *config);
-} /* schedule_configuration */
-
 namespace setback {
 
 typedef struct config {
@@ -603,7 +623,7 @@ namespace auto_mode {
 typedef struct config {
    int8_t min_setpoint_dead_band;
 
-   config (): min_setpoint_dead_band(25) {}
+   config (): min_setpoint_dead_band(2) {}
 } config_t;
 
 uint32_t get_id();
@@ -656,26 +676,26 @@ esp_err_t add(cluster_t *cluster);
 
 } /* fair */
 
-namespace mod {
+namespace moderate {
 
 uint32_t get_id();
 esp_err_t add(cluster_t *cluster);
 
-} /* mod */
+} /* moderate */
 
-namespace vpoor {
-
-uint32_t get_id();
-esp_err_t add(cluster_t *cluster);
-
-} /* vpoor */
-
-namespace xpoor {
+namespace very_poor {
 
 uint32_t get_id();
 esp_err_t add(cluster_t *cluster);
 
-} /* xpoor */
+} /* very_poor */
+
+namespace extremely_poor {
+
+uint32_t get_id();
+esp_err_t add(cluster_t *cluster);
+
+} /* extremely_poor */
 
 } /* feature */
 } /* air_quality */
@@ -1990,12 +2010,6 @@ namespace year_day_access_schedules {
 uint32_t get_id();
 esp_err_t add(cluster_t *cluster);
 } /* year_day_access_schedules */
-
-namespace holiday_schedules {
-
-uint32_t get_id();
-esp_err_t add(cluster_t *cluster);
-} /* holiday_schedules */
 
 namespace holiday_schedules {
 
