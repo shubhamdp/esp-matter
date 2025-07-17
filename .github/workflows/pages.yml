@@ -93,7 +93,7 @@ jobs:
 
   Build-Rainmaker:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'shubham' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.repository_owner == 'shubhamdp' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
 
     runs-on: ubuntu-latest
     container:
@@ -149,7 +149,7 @@ jobs:
 
   deploy:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' }}
+    if: ${{ github.repository_owner == 'shubhamdp' }}
 
     needs:
       # - Build-Matter
