@@ -93,15 +93,17 @@ jobs:
 
   Build-Rainmaker:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.repository_owner == 'shubham' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
 
     runs-on: ubuntu-latest
     container:
-      image: espressif/esp-matter:latest
+      image: espressif/esp-matter:release-v1.4
     strategy:
       matrix:
         targets:
           - {example: matter_light, target: esp32c3, prefix: wifi_rainmaker}
+          - {example: matter_light, target: esp32h2, prefix: wifi_rainmaker}
+          - {example: matter_light, target: esp32c2, prefix: wifi_rainmaker}
 
     steps:
       - run: mkdir -p images
@@ -150,7 +152,7 @@ jobs:
     if: ${{ github.repository_owner == 'espressif' }}
 
     needs:
-      - Build-Matter
+      # - Build-Matter
       - Build-Rainmaker
 
     environment:
