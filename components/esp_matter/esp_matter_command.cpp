@@ -1,4 +1,4 @@
-// Copyright 2021 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2021-2025 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,20 @@ static const char *TAG = "esp_matter_command";
 namespace esp_matter {
 namespace command {
 
+namespace {
+user_callback_t s_global_user_callback = nullptr;
+} // anonymous namespace
+
+void set_global_user_callback(user_callback_t user_callback)
+{
+    s_global_user_callback = user_callback;
+}
+
+user_callback_t get_global_user_callback()
+{
+    return s_global_user_callback;
+}
+
 static callback_t get_cluster_accepted_command(uint32_t cluster_id, uint32_t command_id);
 
 void DispatchSingleClusterCommandCommon(const ConcreteCommandPath &command_path, TLVReader &tlv_data, void *opaque_ptr)
@@ -54,14 +68,32 @@ void DispatchSingleClusterCommandCommon(const ConcreteCommandPath &command_path,
         standard_callback(command_path, tlv_data, opaque_ptr);
     }
     if (command) {
+
+        // Call the per command user callback
+        // TODO: see if we can remove this and use the global user callback instead
         callback_t callback = get_user_callback(command);
         if (callback) {
             err = callback(command_path, tlv_reader, opaque_ptr);
         }
+
+        // Call the global user callback
+        user_callback_t global_user_callback = get_global_user_callback();
+        if (global_user_callback) {
+            global_user_callback(PRE_UPDATE, ESP_OK, command_path, tlv_reader);
+        }
+
+        // Call the per command callback in the SDK
         callback = get_callback(command);
         if ((err == ESP_OK) && callback) {
             err = callback(command_path, tlv_data, opaque_ptr);
         }
+
+        // Call the global user callback with actual status of the command invocation
+        global_user_callback = get_global_user_callback();
+        if (global_user_callback) {
+            global_user_callback(POST_UPDATE, err, command_path, tlv_reader);
+        }
+
         int flags = get_flags(command);
         if (flags & COMMAND_FLAG_CUSTOM) {
             chip::app::CommandHandler *command_obj = (chip::app::CommandHandler *)opaque_ptr;

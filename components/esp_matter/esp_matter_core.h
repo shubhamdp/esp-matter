@@ -782,6 +782,14 @@ esp_err_t set_deferred_persistence(attribute_t *attribute);
 
 namespace command {
 
+/** Command callback type */
+typedef enum {
+    /** Type of callback that is being called before SDK starts processing the command invocation */
+    PRE_UPDATE,
+    /** Type of callback that is being called after SDK has processed the command invocation */
+    POST_UPDATE,
+} command_callback_type_t;
+
 /** Command callback
  *
  * Command callback which is called when the command is invoked.
@@ -797,6 +805,24 @@ namespace command {
  * @return error in case of failure.
  */
 typedef esp_err_t (*callback_t)(const ConcreteCommandPath &command_path, TLVReader &tlv_data, void *opaque_ptr);
+
+/** User command callback
+ *
+ * User command callback which is called when the command is invoked.
+ * application is expected to perform any pre and post processing that is required
+ * when it receives the command.
+ *
+ * @param[in] type         Type of callback that is being called before SDK starts processing the command invocation
+ * @param[in] status       Status of the command invocation
+ *                         In case of PRE_UPDATE, this is ESP_OK,
+ *                         In case of POST_UPDATE, this is the status of the command invocation
+ * @param[in] command_path Concrete structure for endpoint, cluster and commands IDs.
+ * @param[in] tlv_data     Command data in TLV format.
+ *
+ * @return void
+ */
+typedef void (*user_callback_t)(command_callback_type_t type, esp_err_t status,
+                                const ConcreteCommandPath &command_path, const TLVReader &tlv_data);
 
 /** Create command
  *
@@ -893,6 +919,27 @@ callback_t get_user_callback(command_t *command);
  * @return void
  */
 void set_user_callback(command_t *command, callback_t user_callback);
+
+// TODO: Can we move this to esp_matter_command.[h|cpp]
+
+/** Set the global command invocation callback
+ *
+ * User can set a generic command callback for all commands.
+ * If set, this callback will be called for all commands, before the SDK starts processing the command,
+ * and after SDK has processed the command.
+ *
+ * @param[in] user_callback user_callback_t.
+ */
+void set_global_user_callback(user_callback_t user_callback);
+
+/** Get the global command invocation callback
+ *
+ * Get the global command invocation callback.
+ *
+ * @return user_callback_t on success.
+ * @return NULL in case of failure or if the callback was not set.
+ */
+user_callback_t get_global_user_callback();
 
 /** Get command flags
  *
