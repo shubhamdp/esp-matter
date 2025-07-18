@@ -97,7 +97,7 @@ jobs:
 
     runs-on: ubuntu-latest
     container:
-      image: espressif/esp-matter:lastest@sha256:4735b789ac23edea98bbf7992bd1b88ee7f4c83d2a74a60da7719315feee5c40
+      image: espressif/esp-matter:latest@sha256:4735b789ac23edea98bbf7992bd1b88ee7f4c83d2a74a60da7719315feee5c40
     strategy:
       matrix:
         targets:
