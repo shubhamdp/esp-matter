@@ -39,12 +39,14 @@ concurrency:
 jobs:
   Build-Matter:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.repository_owner == 'shubhamdp' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
 
     runs-on: ubuntu-latest
     container:
       image: espressif/esp-matter:latest
+    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         targets:
           - {example: light, target: esp32, prefix: wifi_matter}
@@ -55,12 +57,23 @@ jobs:
           - {example: light_switch, target: esp32c3, prefix: wifi_matter}
 
     steps:
-      - run: mkdir -p images
+      - run: mkdir -p images logs
       - name: build application
+        id: build
+        continue-on-error: true
         run: |
+          set -e
           . $IDF_PATH/export.sh
           . $ESP_MATTER_PATH/export.sh
           cd $ESP_MATTER_PATH/examples/${{ matrix.targets.example }}
+
+          # record the esp-idf and esp-matter commit
+          idf_rev=`git -C $IDF_PATH rev-parse --short HEAD`
+          mtr_rev=`git -C $ESP_MATTER_PATH rev-parse --short HEAD`
+          chip_rev=`git -C $ESP_MATTER_PATH/connectedhomeip/connectedhomeip rev-parse --short HEAD`
+          echo "- esp-idf: [$idf_rev](https://github.com/espressif/esp-idf/tree/$idf_rev)" >> $GITHUB_WORKSPACE/images/.esp-idf
+          echo "- esp-matter: [$mtr_rev](https://github.com/espressif/esp-matter/tree/$mtr_rev)" >> $GITHUB_WORKSPACE/images/.esp-matter
+          echo "- connectedhomeip: [$chip_rev](https://github.com/project-chip/connectedhomeip/tree/$chip_rev)" >> $GITHUB_WORKSPACE/images/.chip
 
           if [ "${{ matrix.targets.sdkconfig }}" != "" ]
           then
@@ -76,35 +89,50 @@ jobs:
           OUT_BIN="$GITHUB_WORKSPACE/images/$TARGET_CHIP"_${{ matrix.targets.prefix }}_"$APP_BIN"
           esptool.py --chip $TARGET_CHIP merge_bin -o $OUT_BIN `cat flash_args | tr '\n' '\ '`
 
-          # record the esp-idf and esp-matter commit
-          idf_rev=`git -C $IDF_PATH rev-parse --short HEAD`
-          mtr_rev=`git -C $ESP_MATTER_PATH rev-parse --short HEAD`
-          chip_rev=`git -C $ESP_MATTER_PATH/connectedhomeip/connectedhomeip rev-parse --short HEAD`
-          echo "- esp-idf: [$idf_rev](https://github.com/espressif/esp-idf/tree/$idf_rev)" >> $GITHUB_WORKSPACE/images/.esp-idf
-          echo "- esp-matter: [$mtr_rev](https://github.com/espressif/esp-matter/tree/$mtr_rev)" >> $GITHUB_WORKSPACE/images/.esp-matter
-          echo "- connectedhomeip: [$chip_rev](https://github.com/project-chip/connectedhomeip/tree/$chip_rev)" >> $GITHUB_WORKSPACE/images/.chip
+
+
+          # Create success marker
+          echo "Build completed successfully" > $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_success.log
+
+      - name: Capture build logs on failure
+        if: failure() && steps.build.outcome == 'failure'
+        run: |
+          echo "Build failed for ${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}" > $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          echo "Error occurred during build process" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          echo "Target: ${{ matrix.targets.target }}" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          echo "Example: ${{ matrix.targets.example }}" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          echo "Prefix: ${{ matrix.targets.prefix }}" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          if [ -f "$ESP_MATTER_PATH/examples/${{ matrix.targets.example }}/build/build.log" ]; then
+            echo "Build log:" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+            tail -100 "$ESP_MATTER_PATH/examples/${{ matrix.targets.example }}/build/build.log" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           include-hidden-files: true
           name: build-images-${{ matrix.targets.target }}-${{ matrix.targets.prefix }}-${{ matrix.targets.example }}
-          path: images/
+          path: |
+            images/
+            logs/
 
   Build-Rainmaker:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.repository_owner == 'shubhamdp' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
 
     runs-on: ubuntu-latest
     container:
       image: espressif/esp-matter:latest
+    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         targets:
           - {example: matter_light, target: esp32c3, prefix: wifi_rainmaker}
 
     steps:
-      - run: mkdir -p images
+      - run: mkdir -p images logs
 
       - uses: actions/checkout@v4
         with:
@@ -113,7 +141,10 @@ jobs:
           path: 'esp-rainmaker'
 
       - name: build application
+        id: build
+        continue-on-error: true
         run: |
+          set -e
           . $IDF_PATH/export.sh
           . $ESP_MATTER_PATH/export.sh
           cd esp-rainmaker/examples/matter/${{ matrix.targets.example }}
@@ -125,6 +156,10 @@ jobs:
             SDK_CFG="$SDK_CFG;sdkconfig.defaults.${{ matrix.targets.target }}"
           fi
 
+          # record the esp-rainmaker commit
+          rmaker_rev=`git rev-parse --short HEAD`
+          echo "- esp-rainmaker: [$rmaker_rev](https://github.com/espressif/esp-rainmaker/tree/$rmaker_rev)" >> $GITHUB_WORKSPACE/images/.esp-rainmaker
+
           idf.py -D SDKCONFIG_DEFAULTS="$SDK_CFG" set-target ${{ matrix.targets.target }} build
           cd build
 
@@ -133,21 +168,36 @@ jobs:
           OUT_BIN="$GITHUB_WORKSPACE/images/$TARGET_CHIP"_${{ matrix.targets.prefix }}_"$APP_BIN"
           esptool.py --chip $TARGET_CHIP merge_bin -o $OUT_BIN `cat flash_args | tr '\n' '\ '`
 
-          # record the esp-rainmaker commit
-          rmaker_rev=`git rev-parse --short HEAD`
-          echo "- esp-rainmaker: [$rmaker_rev](https://github.com/espressif/esp-rainmaker/tree/$rmaker_rev)" >> $GITHUB_WORKSPACE/images/.esp-rainmaker
+          # Create success marker
+          echo "Build completed successfully" > $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_success.log
+
+      - name: Capture build logs on failure
+        if: failure() && steps.build.outcome == 'failure'
+        run: |
+          echo "Build failed for ${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}" > $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          echo "Error occurred during build process" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          echo "Target: ${{ matrix.targets.target }}" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          echo "Example: ${{ matrix.targets.example }}" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          echo "Prefix: ${{ matrix.targets.prefix }}" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          if [ -f "esp-rainmaker/examples/matter/${{ matrix.targets.example }}/build/build.log" ]; then
+            echo "Build log:" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+            tail -100 "esp-rainmaker/examples/matter/${{ matrix.targets.example }}/build/build.log" >> $GITHUB_WORKSPACE/logs/${{ matrix.targets.target }}_${{ matrix.targets.prefix }}_${{ matrix.targets.example }}_error.log
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           include-hidden-files: true
           name: build-images-${{ matrix.targets.target }}-${{ matrix.targets.prefix }}-${{ matrix.targets.example }}
-          path: images/
+          path: |
+            images/
+            logs/
 
 
   deploy:
-    # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' }}
+    # Disable the job in forks - deploy even if some builds failed
+    if: ${{ github.repository_owner == 'shubhamdp' && !cancelled() }}
 
     needs:
       - Build-Matter
@@ -179,6 +229,38 @@ jobs:
           cat .esp-matter >> build_cfg.md
           cat .chip >> build_cfg.md
           cat .esp-rainmaker >> build_cfg.md
+
+          # Generate build status report
+          echo "" >> build_cfg.md
+          echo "#### Build Status" >> build_cfg.md
+
+          # Count successful and failed builds
+          success_count=0
+          failed_count=0
+
+          if [ -d logs ]; then
+            for log_file in logs/*_success.log; do
+              if [ -f "$log_file" ]; then
+                success_count=$((success_count + 1))
+              fi
+            done
+
+            for log_file in logs/*_error.log; do
+              if [ -f "$log_file" ]; then
+                failed_count=$((failed_count + 1))
+                echo "- ❌ $(basename "$log_file" _error.log): Build failed" >> build_cfg.md
+              fi
+            done
+
+            for log_file in logs/*_success.log; do
+              if [ -f "$log_file" ]; then
+                echo "- ✅ $(basename "$log_file" _success.log): Build successful" >> build_cfg.md
+              fi
+            done
+          fi
+
+          echo "" >> build_cfg.md
+          echo "**Summary: $success_count successful, $failed_count failed**" >> build_cfg.md
 
           tree -H '.' -L 1 --noreport -T 'ESP Matter Launchpad Artifacts' -shi --charset utf-8 -I "index.html" -o index.html
 
