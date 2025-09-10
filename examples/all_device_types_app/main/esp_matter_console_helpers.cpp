@@ -76,6 +76,18 @@ static void initialize_filesystem(void)
 }
 #endif // CONFIG_STORE_HISTORY
 
+#define create_cm_cluster(endpoint, cluster_name)  \
+{ \
+    esp_matter::cluster::cluster_name##_concentration_measurement::config_t cluster_config; \
+    cluster_config.feature_flags = cluster::cluster_name##_concentration_measurement::feature::numeric_measurement::get_id(); \
+    cluster_config.feature_flags |= cluster::cluster_name##_concentration_measurement::feature::average_measurement::get_id(); \
+    cluster_config.feature_flags |= cluster::cluster_name##_concentration_measurement::feature::peak_measurement::get_id(); \
+    cluster_config.measurement_medium = static_cast<uint8_t>(CarbonDioxideConcentrationMeasurement::MeasurementMediumEnum::kAir); \
+    cluster_config.features.average_measurement.average_measured_value_window = 10;     \
+    cluster_config.features.peak_measurement.peak_measured_value_window = 10; \
+    esp_matter::cluster::cluster_name##_concentration_measurement::create(endpoint, &cluster_config, CLUSTER_FLAG_SERVER); \
+}
+
 static void initialize_console(void)
 {
     /* Drain stdout before reconfiguring it */
@@ -400,6 +412,17 @@ int create(uint8_t device_type_index)
         case ESP_MATTER_AIR_QUALITY_SENSOR: {
             esp_matter::endpoint::air_quality_sensor::config_t air_quality_sensor_config;
             endpoint = esp_matter::endpoint::air_quality_sensor::create(node, &air_quality_sensor_config, ENDPOINT_FLAG_NONE, NULL);
+            create_cm_cluster(endpoint, carbon_dioxide);
+            create_cm_cluster(endpoint, carbon_monoxide);
+            create_cm_cluster(endpoint, nitrogen_dioxide);
+            create_cm_cluster(endpoint, ozone);
+            create_cm_cluster(endpoint, formaldehyde);
+            create_cm_cluster(endpoint, pm1);
+            create_cm_cluster(endpoint, pm25);
+            create_cm_cluster(endpoint, pm10);
+            create_cm_cluster(endpoint, radon);
+            create_cm_cluster(endpoint, total_volatile_organic_compounds);
+
             break;
         }
         case ESP_MATTER_ROBOTIC_VACUUM_CLEANER: {
