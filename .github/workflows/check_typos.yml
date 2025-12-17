@@ -13,6 +13,8 @@
 # limitations under the License.
 
 name: Check Typos
+permissions:
+  contents: read
 
 on:
   pull_request:
