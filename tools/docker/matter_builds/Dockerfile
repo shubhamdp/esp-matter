@@ -87,7 +87,6 @@ RUN set -x \
     && git fetch origin --depth=1 ${ESP_MATTER_CHECKOUT_REF} \
     && git checkout FETCH_HEAD \
     && git submodule update --init --depth=1 \
-    && curl https://github.com/shubhamdp/esp-matter/commit/c4074b7ce544e486e214fcd272558e001f0b9c9d.patch | git apply \
     && cd ./connectedhomeip/connectedhomeip \
     && ./scripts/checkout_submodules.py --platform esp32 linux --shallow \
     && git rev-parse --short HEAD > /opt/espressif/connectedhomeip-commit.txt \
