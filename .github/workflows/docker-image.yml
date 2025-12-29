@@ -26,13 +26,13 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKERHUB_REPO: ${{ github.repository }}
+  DOCKERHUB_REPO: shubhamdpatil/esp-matter
   REQUIRED_IDF_VERSION: v5.4.1
 
 jobs:
   build:
     # Disable the job in forks
-    if: ${{ github.repository_owner == 'espressif' }}
+    if: ${{ github.repository_owner == 'shubhamdp' }}
 
     runs-on: ubuntu-latest
     strategy:
