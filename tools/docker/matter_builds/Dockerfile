@@ -91,7 +91,7 @@ RUN set -x \
     && ./scripts/checkout_submodules.py --platform esp32 linux --shallow \
     && git rev-parse --short HEAD > /opt/espressif/connectedhomeip-commit.txt \
     && cd ${ESP_MATTER_PATH} && git rev-parse --short HEAD > /opt/espressif/esp-matter-commit.txt \
-    && . ${IDF_PATH}/export.sh \
+    && cd ${IDF_PATH} && . export.sh \
     && ./install.sh --ninja-jobs ${NINJA_JOBS} \
     && : # last line
 
