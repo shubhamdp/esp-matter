@@ -38,7 +38,6 @@ RUN set -x \
     wget \
     curl \
     unzip \
-    rsync \
     # ESP-IDF requirements
     flex \
     bison \
@@ -61,9 +60,12 @@ RUN set -x \
     libmbedtls-dev \
     # Additional utilities
     tree \
-    # Cleanup
+    # Cleanup apt and unnecessary files
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* \
+    && rm -rf /usr/share/locale/* \
+    && rm -rf /var/log/* /var/cache/* \
     && git lfs install \
     && : # last line
 
@@ -71,8 +73,10 @@ WORKDIR /opt/espressif
 RUN set -x \
     && git clone --depth=1 --branch=${IDF_CHECKOUT_REF} --recurse-submodules --shallow-submodules ${IDF_CLONE_URL} ${IDF_PATH} \
     && cd ${IDF_PATH} \
-    && ./install.sh \
+    && ./install.sh --disable-gdbgui --disable-pytest --disable-ci --disable-docs \
     && git rev-parse --short HEAD > /opt/espressif/esp-idf-commit.txt \
+    # remove the archives from the tools path
+    && rm -rf ${IDF_TOOLS_PATH}/dist \
     && rm -rf /root/.cache \
     && : # last line
 
@@ -94,9 +98,10 @@ RUN set -x \
     && cd ${ESP_MATTER_PATH} && git rev-parse --short HEAD > /opt/espressif/esp-matter-commit.txt \
     && export IDF_PATH_FORCE=1 && . ${IDF_PATH}/export.sh \
     && cd ${ESP_MATTER_PATH} && ./install.sh --ninja-jobs ${NINJA_JOBS} \
-    # Move host tools to /usr/local/bin and remove build directory
+    # Move host tools to /usr/local/bin, strip debug symbols, and remove build directory
     && cp ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip/out/host/chip-cert /usr/local/bin/ \
     && cp ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip/out/host/chip-tool /usr/local/bin/ \
+    && strip /usr/local/bin/chip-cert /usr/local/bin/chip-tool \
     && rm -rf ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip/out \
     && rm -rf /root/.cache /tmp/* \
     && : # last line
