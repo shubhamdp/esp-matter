@@ -73,6 +73,7 @@ RUN set -x \
     && cd ${IDF_PATH} \
     && ./install.sh \
     && git rev-parse --short HEAD > /opt/espressif/esp-idf-commit.txt \
+    && rm -rf /root/.cache \
     && : # last line
 
 ARG ESP_MATTER_CLONE_URL=https://github.com/espressif/esp-matter.git
@@ -93,6 +94,11 @@ RUN set -x \
     && cd ${ESP_MATTER_PATH} && git rev-parse --short HEAD > /opt/espressif/esp-matter-commit.txt \
     && export IDF_PATH_FORCE=1 && . ${IDF_PATH}/export.sh \
     && cd ${ESP_MATTER_PATH} && ./install.sh --ninja-jobs ${NINJA_JOBS} \
+    # Move host tools to /usr/local/bin and remove build directory
+    && cp ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip/out/host/chip-cert /usr/local/bin/ \
+    && cp ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip/out/host/chip-tool /usr/local/bin/ \
+    && rm -rf ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip/out \
+    && rm -rf /root/.cache /tmp/* \
     && : # last line
 
 COPY entrypoint.sh /opt/esp/entrypoint.sh
