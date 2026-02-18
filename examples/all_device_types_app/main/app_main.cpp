@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "esp_console.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "esp_console.h"
 
 #include <nvs_flash.h>
 
@@ -24,18 +24,18 @@
 #include <app_priv.h>
 #include <app_reset.h>
 
-#include <helpers.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <helpers.h>
 #include "freertos/semphr.h"
 
 #include <app/server/CommissioningWindowManager.h>
 #include <app/server/Server.h>
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-#include <platform/ESP32/OpenthreadLauncher.h>
 #include <esp_openthread.h>
 #include <esp_openthread_border_router.h>
 #include <esp_openthread_lock.h>
+#include <platform/ESP32/OpenthreadLauncher.h>
 #endif
 
 #include <lib/support/CHIPMem.h>
@@ -56,7 +56,7 @@ using namespace chip::Tracing;
 using namespace chip::Tracing::Diagnostics;
 using namespace chip::app::Clusters::DiagnosticLogs;
 CircularDiagnosticBuffer diagnosticStorage(endUserBuffer, CONFIG_END_USER_BUFFER_SIZE);
-auto & logProvider = LogProvider::GetInstance();
+auto &logProvider = LogProvider::GetInstance();
 constexpr uint16_t kRootNodeEndpointId = 0;
 #endif // CONFIG_ENABLE_ESP_DIAGNOSTICS_TRACE
 
@@ -108,28 +108,25 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
         ESP_LOGI(TAG, "Commissioning window closed");
         break;
 
-    case chip::DeviceLayer::DeviceEventType::kFabricRemoved:
-        {
-            ESP_LOGI(TAG, "Fabric removed successfully");
-            if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0)
-            {
-                chip::CommissioningWindowManager & commissionMgr = chip::Server::GetInstance().GetCommissioningWindowManager();
-                constexpr auto kTimeoutSeconds = chip::System::Clock::Seconds16(k_timeout_seconds);
-                if (!commissionMgr.IsCommissioningWindowOpen())
-                {
-                    /* After removing last fabric, this example does not remove the Wi-Fi credentials
-                     * and still has IP connectivity so, only advertising on DNS-SD.
-                     */
-                    CHIP_ERROR err = commissionMgr.OpenBasicCommissioningWindow(kTimeoutSeconds,
-                                                    chip::CommissioningWindowAdvertisement::kDnssdOnly);
-                    if (err != CHIP_NO_ERROR)
-                    {
-                        ESP_LOGE(TAG, "Failed to open commissioning window, err:%" CHIP_ERROR_FORMAT, err.Format());
-                    }
+    case chip::DeviceLayer::DeviceEventType::kFabricRemoved: {
+        ESP_LOGI(TAG, "Fabric removed successfully");
+        if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0) {
+            chip::CommissioningWindowManager &commissionMgr =
+                chip::Server::GetInstance().GetCommissioningWindowManager();
+            constexpr auto kTimeoutSeconds = chip::System::Clock::Seconds16(k_timeout_seconds);
+            if (!commissionMgr.IsCommissioningWindowOpen()) {
+                /* After removing last fabric, this example does not remove the Wi-Fi credentials
+                 * and still has IP connectivity so, only advertising on DNS-SD.
+                 */
+                CHIP_ERROR err = commissionMgr.OpenBasicCommissioningWindow(
+                    kTimeoutSeconds, chip::CommissioningWindowAdvertisement::kDnssdOnly);
+                if (err != CHIP_NO_ERROR) {
+                    ESP_LOGE(TAG, "Failed to open commissioning window, err:%" CHIP_ERROR_FORMAT, err.Format());
                 }
             }
-        break;
         }
+        break;
+    }
 
     case chip::DeviceLayer::DeviceEventType::kFabricWillBeRemoved:
         ESP_LOGI(TAG, "Fabric will be removed");
@@ -186,7 +183,7 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type, uint16
 {
     esp_err_t err = ESP_OK;
     // If user want to use driver, can be called from here.
-    if (type == PRE_UPDATE) {
+    if (type == POST_UPDATE) {
         /* Driver update */
         app_driver_handle_t driver_handle = (app_driver_handle_t)priv_data;
         err = app_driver_attribute_update(driver_handle, endpoint_id, cluster_id, attribute_id, val);
@@ -294,7 +291,8 @@ extern "C" void app_main()
     // Initialize electrical measurement clusters if electrical sensor was created
     if (g_electrical_sensor_created) {
         ESP_LOGI(TAG, "Initializing electrical measurement clusters for endpoint %d", app_endpoint_id);
-        chip::DeviceLayer::PlatformMgr().ScheduleWork(ElectricalMeasurementWorkHandler, reinterpret_cast<intptr_t>(nullptr));
+        chip::DeviceLayer::PlatformMgr().ScheduleWork(ElectricalMeasurementWorkHandler,
+                                                      reinterpret_cast<intptr_t>(nullptr));
     }
 
 #if CONFIG_ENABLE_CHIP_SHELL
