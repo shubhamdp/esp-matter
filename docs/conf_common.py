@@ -25,6 +25,8 @@ linkcheck_anchors = False
 linkcheck_ignore = [
     # Private repositories
     'https://github.com/CHIP-Specifications/.*',
+    'https://community.csa-iot.org/.*',
+    'https://groups.csa-iot.org/.*',
 
     # Internal documentation links
     './developing.html#.*',

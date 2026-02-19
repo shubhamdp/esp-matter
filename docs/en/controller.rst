@@ -19,8 +19,8 @@ This example implements a Matter controller in RainMaker Matter Fabric without a
 
 Once you have flashed the controller example onto the device, you can use the `device console <./developing.html#device-console>`__ to commission the device and send commands to the end-device. All of the controller commands begin with the prefix ``matter esp controller``.
 
-1 Controller features
-----------------------
+Controller features
+-------------------
 The controller is the role of a node that has permissions to enable it to control one or more nodes. It has a complete chain of Node Operational Credentials (NOC) and acts as an administer or an operator in its Matter fabric. And the NodeId of the controller or CASE Authenticated Tag (CAT) of the controller's NOC should in the Access Control List of other end-devices with administer/operator privilege.
 
 The controller should support the following features:
@@ -31,15 +31,15 @@ The controller should support the following features:
 - Send Subscribe Attribute/Event commands to other nodes.
 - Join Matter Groups and manage the Group Key Set.
 
-1.1 Cluster Invoking commands
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Cluster Invoking commands
+~~~~~~~~~~~~~~~~~~~~~~~~~
 The ``invoke-cmd`` command is used for sending cluster commands to the end-devices. It utilizes a ``cluster_command`` class to establish the sessions and send the command packets. The class constructor function could accept two callback inputs:
 
 - **Success callback**:
-  This callback will be called upon the reception of the success response. It could be used to handle the response data for the command that requires a reponse. Now the default success callback will print the response data for GroupKeyManagement, Groups, Scenes, Thermostat, and DoorLock clusters. If you want to handle the response data in your example, you can register your success callback when creating the ``cluster_command`` object.
+  This callback will be called upon the reception of the success response. It could be used to handle the response data for the command that requires a response. Now the default success callback will print the response data for GroupKeyManagement, Groups, Scenes, Thermostat, and DoorLock clusters. If you want to handle the response data in your example, you can register your success callback when creating the ``cluster_command`` object.
 
 - **Error callback**:
-  This callback will be called upon the reception of the failure response or reponse timeout.
+  This callback will be called upon the reception of the failure response or response timeout.
 
 ^^^^^^^^^^^^^^^^
 
@@ -76,8 +76,8 @@ Here are some examples of the ``command-data`` format.
 
     matter esp controller invoke-cmd <node-id> <endpoint-id> 0x4 0 "{\"0:U16\": 1, \"1:STR\": \"grp1\"}"
 
-1.2 Read commands
-~~~~~~~~~~~~~~~~~
+Read commands
+~~~~~~~~~~~~~
 The ``read_command`` class is used for sending read commands to other end-devices. Its constructor function could accept two callback inputs:
 
 - **Attribute report callback**:
@@ -86,8 +86,8 @@ The ``read_command`` class is used for sending read commands to other end-device
 - **Event report callback**:
   This callback will be called upon the reception of the event report for read-event commands.
 
-1.2.1 Read attribute commands
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Read attribute commands
+^^^^^^^^^^^^^^^^^^^^^^^
 The ``read-attr`` commands are used for sending the commands of reading attributes on end-devices.
 
 - Send the read-attribute command:
@@ -100,8 +100,8 @@ The ``read-attr`` commands are used for sending the commands of reading attribut
 
     - endpoint-ids can represent a single or multiple endpoints, e.g. '0' or '0,1'. And the same applies to cluster-ids, attribute-ids, and event-ids below.
 
-1.2.2 Read event commands
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Read event commands
+^^^^^^^^^^^^^^^^^^^
 The ``read-event`` commands are used for sending the commands of reading events on end-devices.
 
 - Send the read-event command:
@@ -110,8 +110,8 @@ The ``read-event`` commands are used for sending the commands of reading events 
 
     matter esp controller read-event <node-id> <endpoint-ids> <cluster-ids> <event-ids>
 
-1.3 Write attribute commands
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Write attribute commands
+~~~~~~~~~~~~~~~~~~~~~~~~
 The ``write-attr`` command is used for sending the commands of writing attributes on the end-device.
 
 - Send the write-attribute command:
@@ -122,7 +122,7 @@ The ``write-attr`` command is used for sending the commands of writing attribute
 
 .. note::
 
-    - ``attribute_value`` should utilize a JSON object string. And the format of this string is the same as the ``command_data`` in `cluster commands <./developing.html#cluster-commands>`__. This JSON object should contain only one item that represents the attribute value.
+    - ``attribute_value`` should utilize a JSON object string. And the format of this string is the same as the ``command_data`` in `cluster commands <./developing.html#cluster-control>`__. This JSON object should contain only one item that represents the attribute value.
 
 
 Here are some examples of the ``attribute_value`` format.
@@ -158,8 +158,8 @@ For attributes of type uint64_t or int64_t, if the absolute value is greater tha
 
     matter esp controller write-attr <node_id> <endpoint_id> 42 0 "{\"0:ARR-OBJ\":[{\"1:U64\": \"9007199254740993\", \"2:U8\": 0}]}"
 
-1.4 Subscribe commands
-~~~~~~~~~~~~~~~~~~~~~~
+Subscribe commands
+~~~~~~~~~~~~~~~~~~
 The ``subscribe_command`` class is used for sending subscribe commands to other end-devices. Its constructor function could accept four callback
 inputs:
 
@@ -175,8 +175,8 @@ inputs:
 - **Subscribe failure callback**:
   This callback will be invoked upon the failure of establishing CASE session.
 
-1.4.1 Subscribe attribute commands
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Subscribe attribute commands
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``subs-attr`` commands are used for sending the commands of subscribing attributes on end-devices.
 
 - Send the subscribe-attribute command:
@@ -185,8 +185,8 @@ The ``subs-attr`` commands are used for sending the commands of subscribing attr
 
     matter esp controller subs-attr <node-id> <endpoint-ids> <cluster-ids> <attribute-ids> <min-interval> <max-interval>
 
-1.4.2 Subscribe event commands
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Subscribe event commands
+^^^^^^^^^^^^^^^^^^^^^^^^
 The ``subs-event`` commands are used for sending the commands of subscribing events on end-devices.
 
 - Send the subscribe-event command:
@@ -195,8 +195,8 @@ The ``subs-event`` commands are used for sending the commands of subscribing eve
 
     matter esp controller subs-event <node-id> <endpoint-ids> <cluster-ids> <event-ids> <min-interval> <max-interval>
 
-1.5 Group settings commands
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Group settings commands
+~~~~~~~~~~~~~~~~~~~~~~~
 The ``group-settings`` commands are used to set group information of the controller. If the controller wants to send multicast commands to end-devices, it should be in the same group as the end-devices.
 
 - Set group information of the controller:
@@ -212,8 +212,8 @@ The ``group-settings`` commands are used to set group information of the control
     matter esp controller group-settings bind-keyset <group-id> <ketset-id>
     matter esp controller group-settings unbind-keyset <group-id> <ketset-id>
 
-2 Commissioner features
------------------------
+Commissioner features
+---------------------
 The commissioner is an enhanced controller that can perform commissioning which is the sequence of operations to bring a Node into a Fabric by assigning an Operational Node ID and Node Operational credentials.
 
 The commissioner should support the additional features:
@@ -222,8 +222,8 @@ The commissioner should support the additional features:
 - Verify the commissionee's Device Attestation Certificate (DAC) chain and Certificate Declaration (CD) during commissioning.
 - Receive the Certificate Signing Request (CSR) and issue NOC for it during commissioning.
 
-2.1 Pairing commands
-~~~~~~~~~~~~~~~~~~~~
+Pairing commands
+~~~~~~~~~~~~~~~~
 The ``pairing`` commands are used for commissioning end-devices and are available when the ``Enable matter commissioner`` option is enabled. Here are three standard pairing methods:
 
 - **Onnetwork pairing:** Prior to executing this commissioning method, it is necessary to connect both the controller and the end-device to the same network and ensure that the commissioning window of the end-device is open. To complete this process, you can use the command ``matter esp wifi connect``. After the devices are connected, the pairing process can be initiated.
@@ -269,11 +269,11 @@ Below are supported commands:
 
     matter esp controller pairing code-wifi-thread <node_id> <ssid> <passphrase> <operationalDataset> <setup_payload>
 
-2.2 Attestation Verification
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Attestation Verification
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-2.2.1 Attestation Trust Storage
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Attestation Trust Storage
+^^^^^^^^^^^^^^^^^^^^^^^^^
 The commissioner offers four options for the Attestation Trust Storage which is used to store and utilize the PAA certificates for the Device Attestation verification. This feature is available when the ``Enable matter commissioner`` option is enabled in menuconfig. You can modify this setting in menuconfig ``Components`` -> ``ESP Matter Controller`` -> ``Attestation Trust Store``.
 
 - ``Attestation Trust Store - Test``
@@ -292,8 +292,8 @@ The commissioner offers four options for the Attestation Trust Storage which is 
 
   Use the custom Attestation Trust Storage. You should call ``set_custom_attestation_trust_store()`` to set the custom Attestation Trust Store before setting up the commissioner.
 
-2.3 NOC Issuer
-~~~~~~~~~~~~~~
+NOC Issuer
+~~~~~~~~~~
 
 In the `esp_matter commissioner <https://github.com/espressif/esp-matter/tree/main/examples/controller>`_ example, the commissioner offers two options to issue the NOC chains for itself and other operational nodes.
 
@@ -305,38 +305,38 @@ In the `esp_matter commissioner <https://github.com/espressif/esp-matter/tree/ma
 
   Obtain the NOC chains for the commissioner and other operational nodes with a custom issuer class. The NOC chains can be issued from the cloud with the custom issuer.
 
-3 Production Considerations
----------------------------
+Production Considerations
+-------------------------
 
-3.1 Controller Production
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Controller Production
+~~~~~~~~~~~~~~~~~~~~~
 The Matter Controller should always work with a commissioner which is typically a mobile application that assists with its setup and onboarding.
 
-3.1.1 Access Control Privilege
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Access Control Privilege
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 The controller should possess either Administrator or Operator privileges in order to access other nodes within the same Matter fabric. A common approach is to issue a NOC containing an Administrator/Operator CAT for the controller, and to initialize the Access Control List (ACL) of Matter end devices with the corresponding CATs.
 
-3.1.2 Controller NOC
-^^^^^^^^^^^^^^^^^^^^
+Controller NOC
+^^^^^^^^^^^^^^
 
 To access other nodes within a Matter fabric, the controller must be part of the same fabric. Therefore, there must be a mechanism to deliver the NOC chain to the controller. Upon receiving the chain, the controller can add or update it in its Fabric Table.
 
-3.1.3 Device List
-^^^^^^^^^^^^^^^^^
+Device List
+^^^^^^^^^^^
 
 The controller should be able to retrieve the list of devices within the same Matter fabric. This list should include the Node IDs and device type information of each node, enabling the controller to determine how to interact with and control the respective Matter end devices.
 
-3.2 Commissioner Production
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Commissioner Production
+~~~~~~~~~~~~~~~~~~~~~~~
 
-3.2.1 Onboarding Payload
-^^^^^^^^^^^^^^^^^^^^^^^^
+Onboarding Payload
+^^^^^^^^^^^^^^^^^^
 
 The Matter Commissioner should be able to get the QR Code or Manual Code of Matter end-device so that it can start commissioning that device.
 
-3.2.2 Device Attestation Verification
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Device Attestation Verification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Matter Commissioner should be able to process the following DA verification during commissioning:
 
@@ -344,12 +344,12 @@ The Matter Commissioner should be able to process the following DA verification 
 - Verify that the CD of the commissionee is issued by CSA.
 - Verify that the DAC or PAI Certificate is not revoked in CSA's DCL.
 
-3.2.3 NOC Issuer
-^^^^^^^^^^^^^^^^
+NOC Issuer
+^^^^^^^^^^
 
 The Matter Commissioner should be able to install NOC chain on the commissionee during commissioning. The custom NOC issuer should be implemented so that the Matter Commissioner could generate or otherwise obtain NOC chain after receiving CSRResponse command from the commissionee. In production, the NOC issuer is typically a cloud service: the Commissioner retrieves the CSR from the commissionee and forwards it to the cloud service for signing. The local RCAC is intended for testing only and must not be used in production.
 
-3.2.4 Access Control List Configuration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Access Control List Configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Matter Commissioner should configure the ACL on the Commissionee over PASE session to grant Administer/Operator privilege over CASE authentication type for all the controllers in the Matter fabric.

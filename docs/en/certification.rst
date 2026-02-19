@@ -5,11 +5,11 @@ The Matter Certification denotes compliance to a Connectivity Standards Alliance
 
 You need to `become a member <https://csa-iot.org/become-member/>`__ of CSA and request a Vendor ID code from CSA Certification before you apply for a Matter Certification. Then you need to choose an `authorized test provider <https://csa-iot.org/certification/testing-providers/>`__ (must be validated for Matter testing) and submit your product for testing. Below are the steps for the Matter Certification.
 
-1 Firmware Development
-----------------------
+Firmware Development
+--------------------
 
-1.1 Choose an esp-matter branch
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Choose an esp-matter branch
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use the branch corresponding to the Matter version you plan to certify for firmware development.
 
@@ -32,8 +32,8 @@ Use the branch corresponding to the Matter version you plan to certify for firmw
    * - Matter 1.5
      - `release/v1.5 <https://github.com/espressif/esp-matter/tree/release/v1.5>`__
 
-1.2 Product Attestation Authority (PAA) Generation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Product Attestation Authority (PAA) Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For Matter certification testing, vendors should generate the test Product Attestation Authority (PAA) certificate, Product Attestation Intermediate (PAI), and Device Attestation Certificate (DAC), rather than using the default test PAA certificate from the connectedhomeip SDK repository. Therefore, you need to generate a PAA certificate and use it to sign the PAI certificate, which is then used to sign the DAC. The PAI certificate, DAC certificate, and DAC private key should be stored in the product under test.
 The `chip-cert <https://github.com/project-chip/connectedhomeip/blob/master/src/tools/chip-cert/README.md>`__ tool which is built in `esp-matter setup <https://github.com/espressif/esp-matter/blob/main/docs/en/developing.rst#2-esp-matter-setup>`__ process can be used to generate the PAA certificate and Certification Declaration (CD).
@@ -46,8 +46,8 @@ The `chip-cert <https://github.com/project-chip/connectedhomeip/blob/master/src/
                                 --out-key /path/to/PAA_key \
                                 --out /path/to/PAA_certificate
 
-1.3 Certification Declaration (CD) Generation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Certification Declaration (CD) Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Certification Declaration (CD) is a cryptographic document that proves a Matter device complies with protocol standards. For Matter certification testing, users should issue a test CD based on the test CD signing keys in the connectedhomeip SDK repository. This test CD should match the Vendor ID and Product ID in the test DAC, as well as the information in the BasicInformation cluster. During certification testing, the CD's --certification-type should be set to 1 (provisional), while the official CD issued by CSA after passing certification will have --certification-type set to 2 (official).
 
@@ -62,8 +62,8 @@ Certification Declaration (CD) is a cryptographic document that proves a Matter 
                                 --cert $ESP_MATTER_PATH/connectedhomeip/connectedhomeip/credentials/test/certification-declaration/Chip-Test-CD-Signing-Cert.pem \
                                 --out path/to/test_CD_file
 
-1.4 Factory Bin File Generation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Factory Bin File Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Based on the test PAA and CD generated above, users can use `esp-matter-mfg-tool <https://github.com/espressif/esp-matter-tools?tab=readme-ov-file>`__ to generate the corresponding factory partition bin file. This file contains commissioning information (discriminator, salt, iteration count, and SPAKE2+ verifier), device attestation information (Certification Declaration (CD), Product Attestation Intermediate (PAI) certificate, Device Attestation Certificate (DAC), and DAC private key), device instance information (vendor ID, vendor name, product ID, product name, etc.), and device information (fixed label, supported locales, etc.). This information is used to identify the product and ensure secure commissioning.
 
@@ -76,8 +76,8 @@ In the reference command below, the -n option specifies the number of factory bi
                         -cd /path/to/CD_file -v 0x131B --vendor-name Espressif -p 0x1234 \
                         --product-name Test-light --hw-ver 1 --hw-ver-str v1.0
 
-1.5 Firmware Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Firmware Configuration
+~~~~~~~~~~~~~~~~~~~~~~~
 
 When generating test product firmware, the following configurations can be set in menuconfig to enable accessing the information from the factory bin file generated above:
 
@@ -90,8 +90,8 @@ When generating test product firmware, the following configurations can be set i
     CONFIG_FACTORY_COMMISSIONABLE_DATA_PROVIDER=y
     CONFIG_FACTORY_DEVICE_INSTANCE_INFO_PROVIDER=y
 
-1.6 OTA File Generation
-~~~~~~~~~~~~~~~~~~~~~~~
+OTA File Generation
+~~~~~~~~~~~~~~~~~~~
 
 If the test device supports standard Matter OTA, you need to prepare OTA files for certification testing. (Note: You can add OTA `rollback <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/system/ota.html#app-rollback>`__ functionality to facilitate certification testing)
 
@@ -105,8 +105,8 @@ Use `ota_image_tool.py <https://github.com/project-chip/connectedhomeip/blob/mas
     ./ota_image_tool.py create -v <vendor-id> -p <product-id> -vn 2 -vs 1.1 -da sha256 \
                             /path/to/original_app_bin /path/to/out_ota_bin
 
-1.7 Other Notes
-~~~~~~~~~~~~~~~
+Other Notes
+~~~~~~~~~~~
 
 For products that support the Identify cluster, you need to set the identify type according to the specific product form:
 
@@ -181,13 +181,13 @@ Implement the corresponding identify command and trigger effect command handlers
         return err;
     }
 
-2 Preparation of Files Required for Certification Testing
------------------------------------------------------------
+Preparation of Files Required for Certification Testing
+---------------------------------------------------------
 
 After preparing the device under test, users need to prepare the following files to submit to the testing organization along with the device.
 
-2.1 PICS File
-~~~~~~~~~~~~~~
+PICS File
+~~~~~~~~~~
 
 The PICS file is used to define all Matter features of the product, including endpoints, device types, clusters, attributes, commands, etc. The testing organization will determine the test cases to execute during certification testing based on the PICS file submitted by the user.
 
@@ -206,33 +206,33 @@ The `PICS-generator tool <https://github.com/project-chip/connectedhomeip/tree/m
                             --thread-dataset-hex thread_dataset --passcode setup-pin-code --discriminator discriminator \
                             --paa-trust-store-path path/to/paa --dm-xml path/to/data_model
 
-2.2 Test PAA Certificate
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Test PAA Certificate
+~~~~~~~~~~~~~~~~~~~~~~
 
 Use the PAA file generated above.
 
-2.3 OTA File
-~~~~~~~~~~~~~
+OTA File
+~~~~~~~~~
 
 Use the OTA file generated above.
 
-2.4 QR Code for Device Under Test
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+QR Code for Device Under Test
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use the QR code for the device under test.
 
-2.5 Operating Instructions for Device Under Test
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Operating Instructions for Device Under Test
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Provide operating instructions for powering the device, performing factory reset, OTA updates, rollback, and other operations.
 
-3 Testing Environment Setup and Testing Methods
--------------------------------------------------
+Testing Environment Setup and Testing Methods
+-----------------------------------------------
 
 After preparing the device under test, users can perform self-testing using the `Test Harness tool <https://github.com/project-chip/certification-tool>`__.
 
-3.1 Different Matter versions use different `Test Harness tool versions <https://community.csa-iot.org/page/matter-th>`__ for certification.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Different Matter versions use different `Test Harness tool versions <https://community.csa-iot.org/page/matter-th>`__ for certification.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table:: TH Version Mapping
    :widths: 20 35 20
@@ -260,18 +260,18 @@ After preparing the device under test, users can perform self-testing using the 
      - v2.14+fall2025
      - ca9d111
 
-3.2 Test Harness Setup
-~~~~~~~~~~~~~~~~~~~~~~~
+Test Harness Setup
+~~~~~~~~~~~~~~~~~~~
 
 After selecting the Test Harness version according to the table above, refer to the `Matter_TH_User_Guide.pdf <https://groups.csa-iot.org/wg/members-all/document/37522>`__ document for each Matter version setup, for different test harness versions, the Matter_TH_User_Guide.pdf file may be different.
 
-4 Submitting Certification Application Online
----------------------------------------------
+Submitting Certification Application Online
+-------------------------------------------
 
 After the device under test passes all tests from the testing organization, users can fill out the application on the CSA certification application `website <https://zigbeecertifiedproducts.knack.com/zigbee-certified#home/>`__ . The following explanation uses Add New Product Application as an example.
 
-4.1 Information to Fill In
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Information to Fill In
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table:: Application Parameters Description
    :widths: 30 70
@@ -350,48 +350,48 @@ After the device under test passes all tests from the testing organization, user
    * - Security Attestation
      - Security attestation document
 
-4.2 `Declaration of Conformance <https://groups.csa-iot.org/wg/members-all/document/126>`__ (Doc) Instructions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+`Declaration of Conformance <https://groups.csa-iot.org/wg/members-all/document/126>`__ (Doc) Instructions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Based on the Doc template provided by Espressif, fill in the relevant content. After the manufacturer signs this document, send it to the certification testing organization. After the testing organization signs it, the manufacturer uploads the signed Doc.
 
-4.3 Transport Attestations (`Bluetooth <https://groups.csa-iot.org/wg/members-all/document/40252>`__, `Wi-Fi <https://groups.csa-iot.org/wg/members-all/document/27435>`__, `Thread <https://groups.csa-iot.org/wg/members-all/document/27434>`__, `Ethernet <https://groups.csa-iot.org/wg/members-all/document/27436>`__) Instructions:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Transport Attestations (`Bluetooth <https://groups.csa-iot.org/wg/members-all/document/40252>`__, `Wi-Fi <https://groups.csa-iot.org/wg/members-all/document/27435>`__, `Thread <https://groups.csa-iot.org/wg/members-all/document/27434>`__, `Ethernet <https://groups.csa-iot.org/wg/members-all/document/27436>`__) Instructions:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Fill in based on the Transport Attestation template provided by Espressif (version description). Different chip models may have different certificate numbers, which should be verified before filling in. After completion, sign and upload yourself.
 
-4.4 Security Attestation Instructions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Security Attestation Instructions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Fill in based on the Security Attestation template provided by Espressif. After completion, sign and upload yourself.
 
-4.5 Get the AID and test report
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Get the AID and test report
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 After completing and submitting the application, you will receive an Application ID (AID). Provide this ID to the certification testing organization, and the testing organization will upload the product test report to the CSA certification body.
 
-4.6 Other steps
-~~~~~~~~~~~~~~~~
+Other steps
+~~~~~~~~~~~~
 
 After completing the application and payment, the CSA certification team will review the application and test report submitted by the manufacturer. If there are issues, the manufacturer will be notified by email. If there are no issues, the certification is passed, and the official CD file will be issued.
 
-5 Filling in Certified Product Information on DCL Website
-----------------------------------------------------------
+Filling in Certified Product Information on DCL Website
+--------------------------------------------------------
 
 After the product passes certification, manufacturers also need to add Model, Model Version, and Compliance on the `Distributed Compliance Ledger <https://webui.dcl.csa-iot.org/>`__ (DCL). Refer to the documentation: `HowTo - Writing to the DCL.pdf <https://groups.csa-iot.org/wg/members-all/document/27881>`__ .
 
-6 Other notes for some certification test cases
-------------------------------------------------
+Other notes for some certification test cases
+----------------------------------------------
 
-6.1  Route Information Option (RIO) notes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Route Information Option (RIO) notes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For Wi-Fi products using LwIP, TC-SC-4.9 should be tested in order to verify that the product can receive Router Advertisement (RA) message with RIO and add route table that indicates whether the prefix can be reached by way of the router. It can be tested with a Thread Border Router (BR) which sends RA message periodically and a Thread End Device that is used to verify the Wi-Fi product can reach the Thread network via Thread BR. Some Wi-Fi Routers might have the issue that they cannot forward RA message sent by the Thread BR, so please use a Wi-Fi Router that can forward RA message when you are testing TC-SC-4.9.
 
 Here are the steps to set up the Thread BR and Thread End Device. You should prepare 2 Radio Co-Processors (RCP) to set up the `ot-br-posix <https://github.com/openthread/ot-br-posix>`__ and `ot-cli-posix <https://github.com/openthread/openthread/tree/main/examples/apps/cli>`__. The `RCP on ESP32-H2 <https://github.com/espressif/esp-idf/tree/master/examples/openthread/ot_rcp>`__ is suggested to be used here. And you can also use other platforms (such as nrf52840, efr32, etc.) as the RCPs.
 
-6.1.1 Setup Thread BR
-^^^^^^^^^^^^^^^^^^^^^^
+Setup Thread BR
+^^^^^^^^^^^^^^^^
 
 The otbr-posix can be run on RaspberryPi or Ubuntu machine. Connecting an RCP to the host, the port ``RCP_PORT1`` for it will be ``/dev/ttyUSBX`` or ``/dev/ttyACMX``.
 
@@ -430,8 +430,8 @@ The otbr-posix is running on the host now. Open another terminal, start console 
 
 Please record the dataset you get with the last command, it will be used by ot-cli-posix to join the BR's network in the next step.
 
-6.1.2 Setup Thread End Device
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Setup Thread End Device
+^^^^^^^^^^^^^^^^^^^^^^^
 
 We use the Posix Thread Command-Line Interface (CLI) as the Thread End Device. Connect another RCP to the host and get the port `RCP_PORT2` for it.
 
@@ -482,23 +482,23 @@ Ping the IP address of the Wi-Fi device.
 
 The ping command should be successful.
 
-6.2 TC-CNET-3.11
-~~~~~~~~~~~~~~~~~
+TC-CNET-3.11
+~~~~~~~~~~~~~
 
 No response on step 7 is expected (`Related issue <https://github.com/CHIP-Specifications/chip-test-plans/issues/1947>`__).
 
 All the NetworkCommissioning commands are fail-safe required. If the commands fail with a ``FAILSAFE_REQUIRED`` status code. You need to send ``arm-fail-safe`` command and then send the NetworkCommissioning commands.
 
-6.3 TC-RR-1.1
-~~~~~~~~~~~~~~
+TC-RR-1.1
+~~~~~~~~~~
 
 For more application endpoints with group cluster, need more nvs size to store group table, so if the ``TC-RR-1.1`` failed, can try to increase the nvs size. (`Related issue <https://github.com/project-chip/connectedhomeip/issues/32481>`__)
 
 Please note that the minimum NVS size required is 48 KB (0xC000) when using a single endpoint with a group cluster.
 
 
-7 FW/SDK configuration notes
------------------------------
+FW/SDK configuration notes
+---------------------------
 
 - ``Enable OTA Requestor`` in ``→ Component config → CHIP Core → System Options``
 
