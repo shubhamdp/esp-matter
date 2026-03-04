@@ -70,7 +70,9 @@ esp_err_t add(endpoint_t *endpoint, config_t *config)
     access_control::create(endpoint, &(config->access_control), CLUSTER_FLAG_SERVER);
     basic_information::create(endpoint, &(config->basic_information), CLUSTER_FLAG_SERVER);
     general_commissioning::create(endpoint, &(config->general_commissioning), CLUSTER_FLAG_SERVER);
+#ifndef CONFIG_CUSTOM_NETWORK_CONFIG
     network_commissioning::create(endpoint, &(config->network_commissioning), CLUSTER_FLAG_SERVER);
+#endif
     general_diagnostics::create(endpoint, &(config->general_diagnostics), CLUSTER_FLAG_SERVER);
     administrator_commissioning::create(endpoint, &(config->administrator_commissioning), CLUSTER_FLAG_SERVER);
     operational_credentials::create(endpoint, &(config->operational_credentials), CLUSTER_FLAG_SERVER);
