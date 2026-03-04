@@ -251,7 +251,9 @@ static void esp_matter_chip_init_task(intptr_t context)
         ESP_LOGE(TAG, "Failed to add fabric delegate, err:%" CHIP_ERROR_FORMAT, ret.Format());
     }
     chip::Server::GetInstance().Init(initParams);
+#ifndef CONFIG_CUSTOM_NETWORK_CONFIG
     network_commissioning_instance_init();
+#endif
 
 #ifdef CONFIG_ESP_MATTER_ENABLE_DATA_MODEL
     if (endpoint::enable_all() != ESP_OK) {

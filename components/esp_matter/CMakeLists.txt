@@ -46,6 +46,11 @@ if (CONFIG_ESP_MATTER_ENABLE_MATTER_SERVER)
         endif()
 
     endif(CONFIG_ESP_MATTER_ENABLE_DATA_MODEL)
+
+    if (CONFIG_CUSTOM_NETWORK_CONFIG)
+        list(APPEND EXCLUDE_SRCS_LIST "network_commissioning_instance.cpp")
+    endif()
+
 else()
     list(APPEND EXCLUDE_SRCS_LIST "esp_matter_identify.cpp"
                                   "esp_matter_ota.cpp"
