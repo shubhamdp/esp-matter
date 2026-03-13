@@ -53,12 +53,27 @@ class GitLabAPI:
         response.raise_for_status()
         return response.json()
 
-    def fetch_pipeline_jobs(self, pipeline_id):
+    def fetch_pipeline_jobs(self, pipeline_id, per_page=100):
         url = f"{self.gitlab_api_url}/projects/{self.ci_project_id}/pipelines/{pipeline_id}/jobs"
         headers = {"PRIVATE-TOKEN": self.gitlab_token}
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return response.json()
+        all_jobs = []
+        page = 1
+        while True:
+            params = {"per_page": per_page, "page": page}
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            jobs = response.json()
+            if not jobs:
+                break
+            all_jobs.extend(jobs)
+            # The "x-total" header indicates the total number of jobs available for this pipeline in GitLab.
+            total = response.headers.get("x-total")
+            if total and len(all_jobs) >= int(total):
+                break
+            if len(jobs) < per_page:
+                break
+            page += 1
+        return all_jobs
 
     def download_artifact(self, job_id, artifact_path, output_file):
         url = f"{self.gitlab_api_url}/projects/{self.ci_project_id}/jobs/{job_id}/artifacts/{artifact_path}"
