@@ -16,6 +16,7 @@
 #include <esp_err.h>
 #include <esp_matter_attribute_utils.h>
 #include <app/data-model-provider/Provider.h>
+#include <app/server-cluster/ServerClusterInterface.h>
 #include "app/ConcreteCommandPath.h"
 #include "app/util/af-types.h"
 #include "lib/core/DataModelTypes.h"
@@ -802,6 +803,20 @@ initialization_callback_t get_init_callback(cluster_t *cluster);
  * @return NULL in case of failure or not set.
  */
 shutdown_callback_t get_shutdown_callback(cluster_t *cluster);
+
+/** Get the ServerClusterInterface instance for the given endpoint and cluster.
+ *
+ * This provides generic access to code-driven (chip-managed) cluster instances
+ * registered with the data model provider. The returned pointer can be
+ * static_cast to the concrete cluster type (e.g., BooleanStateCluster).
+ *
+ * @param[in] endpoint_id Endpoint id.
+ * @param[in] cluster_id Cluster id.
+ *
+ * @return ServerClusterInterface pointer on success.
+ * @return NULL if the cluster is not found on the endpoint.
+ */
+chip::app::ServerClusterInterface *get_server_cluster_instance(uint16_t endpoint_id, uint32_t cluster_id);
 
 } /* cluster */
 

@@ -225,6 +225,41 @@ void emberAfDoorLockClusterInitCallback(chip::EndpointId endpoint)
 }
 #endif // CONFIG_SUPPORT_DOOR_LOCK_CLUSTER
 
+
+#include <app/clusters/boolean-state-server/boolean-state-cluster.h>
+
+// Set the boolean state value via generic SDK API
+static void set_boolean_state(uint16_t endpoint_id, bool value)
+{
+    lock::ScopedChipStackLock lock(portMAX_DELAY);
+    auto *sci = esp_matter::cluster::get_server_cluster_instance(endpoint_id, BooleanState::Id);
+    if (sci) {
+        static_cast<BooleanStateCluster *>(sci)->SetStateValue(value);
+    }
+}
+
+// Get the boolean state value via generic SDK API
+static bool get_boolean_state(uint16_t endpoint_id)
+{
+    auto *sci = esp_matter::cluster::get_server_cluster_instance(endpoint_id, BooleanState::Id);
+    if (sci) {
+        return static_cast<BooleanStateCluster *>(sci)->GetStateValue();
+    }
+    return false;
+}
+
+static bool get_boolean_state_get_val(uint16_t endpoint_id)
+{
+    esp_matter_attr_val_t val;
+    esp_err_t err = attribute::get_val(endpoint_id, BooleanState::Id, BooleanState::Attributes::StateValue::Id, &val);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get boolean state value, err:%d", err);
+        return false;
+    }
+
+    return val.val.b;
+}
+
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
@@ -309,7 +344,16 @@ extern "C" void app_main()
 #endif
 
     while (true) {
-        MEMORY_PROFILER_DUMP_HEAP_STAT("Idle");
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        bool state = get_boolean_state(1);
+        ESP_LOGE(TAG, "get_boolean_state:%u", state);
+        ESP_LOGE(TAG, "get_boolean_state_get_val:%u", get_boolean_state_get_val(1));
+
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
+
+        state = !state;
+        set_boolean_state(1, state);
+        ESP_LOGE(TAG, "set_boolean_state:%u", state);
+
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }

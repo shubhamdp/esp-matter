@@ -1623,6 +1623,13 @@ shutdown_callback_t get_shutdown_callback(cluster_t *cluster)
     return current_cluster->shutdown_callback;
 }
 
+chip::app::ServerClusterInterface *get_server_cluster_instance(uint16_t endpoint_id, uint32_t cluster_id)
+{
+    return esp_matter::data_model::provider::get_instance()
+        .registry()
+        .Get(chip::app::ConcreteClusterPath(endpoint_id, cluster_id));
+}
+
 } // namespace cluster
 
 namespace endpoint {
