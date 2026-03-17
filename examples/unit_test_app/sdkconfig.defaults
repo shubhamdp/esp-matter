@@ -18,9 +18,14 @@ CONFIG_PARTITION_TABLE_OFFSET=0xC000
 # Enable chip shell
 CONFIG_ENABLE_CHIP_SHELL=y
 
-# Disable WiFi AP
+# Disable WiFi — unit tests don't need networking and WiFi PHY calibration hangs in QEMU
+CONFIG_ENABLE_WIFI_STATION=n
 CONFIG_ENABLE_WIFI_AP=n
 CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
+
+# Use QEMU virtual Ethernet instead of WiFi
+CONFIG_ETH_USE_OPENETH=y
+CONFIG_ENABLE_ETHERNET_TELEMETRY=y
 
 #enable lwIP route hooks
 CONFIG_LWIP_HOOK_IP6_ROUTE_DEFAULT=y
