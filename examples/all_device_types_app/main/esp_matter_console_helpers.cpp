@@ -539,6 +539,7 @@ int create(uint8_t device_type_index)
         energy_evse_config.energy_evse.delegate = &energyEvseDelegate;
         energy_evse_config.energy_evse_mode.delegate = &evseModeDelegate;
         energy_evse_config.device_energy_management.delegate = &evseDemDelegate;
+        energy_evse_config.device_energy_management.feature_flags = cluster::device_energy_management::feature::power_adjustment::get_id();
         endpoint = esp_matter::endpoint::energy_evse::create(node, &energy_evse_config, ENDPOINT_FLAG_NONE, NULL);
 
         esp_matter::endpoint::power_source::config_t power_source_config;
@@ -590,6 +591,7 @@ int create(uint8_t device_type_index)
         static chip::app::Clusters::DeviceEnergyManagement::MockDeviceEnergyManagementDelegate demDelegate;
         device_energy_management_config.device_energy_management_mode.delegate = &demModeDelegate;
         device_energy_management_config.device_energy_management.delegate = &demDelegate;
+        device_energy_management_config.device_energy_management.feature_flags = cluster::device_energy_management::feature::power_adjustment::get_id();
         endpoint = esp_matter::endpoint::device_energy_management::create(node, &device_energy_management_config, ENDPOINT_FLAG_NONE, NULL);
         break;
     }

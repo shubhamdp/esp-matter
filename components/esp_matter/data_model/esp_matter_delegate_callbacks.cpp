@@ -233,11 +233,8 @@ void MicrowaveOvenModeDelegateInitCB(void *delegate, uint16_t endpoint_id)
 
 void DeviceEnergyManagementModeDelegateInitCB(void *delegate, uint16_t endpoint_id)
 {
-    VerifyOrReturn(delegate != nullptr);
-    DeviceEnergyManagement::Delegate *_delegate = static_cast<DeviceEnergyManagement::Delegate*>(delegate);
-    chip::BitMask<DeviceEnergyManagement::Feature> feature_map(get_feature_map_value(endpoint_id, DeviceEnergyManagement::Id));
-    DeviceEnergyManagement::Instance *instance = new DeviceEnergyManagement::Instance(endpoint_id, *_delegate, feature_map);
-    (void)instance->Init();
+    ModeBase::Delegate *device_energy_management_mode_delegate = static_cast<ModeBase::Delegate*>(delegate);
+    InitModeDelegate(device_energy_management_mode_delegate, endpoint_id, DeviceEnergyManagementMode::Id);
 }
 
 void EnergyEvseDelegateInitCB(void *delegate, uint16_t endpoint_id)
