@@ -172,6 +172,25 @@ static esp_err_t add_bridge_device_handler(int argc, char *argv[])
     cli_device = new_cli_dev;
     ESP_LOGI(TAG, "Created bridged device (endpoint id 0x%04" PRIX16 ") successfully",
              new_cli_dev->device->persistent_info.device_endpoint_id);
+
+    /* For on_off_light, also add a dimmable_light as a child to test composed device PartsList.
+     * Hierarchy: Aggregator(EP1) -> OnOffLight(EP_parent) -> DimmableLight(EP_child)
+     * With full-family composition, EP1's PartsList should include both endpoints. */
+    if (device_type_id == ESP_MATTER_ON_OFF_LIGHT_DEVICE_TYPE_ID) {
+        dimmable_light::config_t dim_config;
+        esp_matter::endpoint_t *dim_ep = dimmable_light::create(node, &dim_config,
+                                                                 ENDPOINT_FLAG_DESTROYABLE | ENDPOINT_FLAG_BRIDGE, NULL);
+        if (dim_ep) {
+            esp_matter::endpoint::set_parent_endpoint(dim_ep, new_cli_dev->device->endpoint);
+            if (esp_matter::endpoint::enable(dim_ep) == ESP_OK) {
+                ESP_LOGI(TAG, "  + child dimmable_light (EP%d) -> parent on_off_light (EP%d)",
+                         esp_matter::endpoint::get_id(dim_ep),
+                         new_cli_dev->device->persistent_info.device_endpoint_id);
+                ESP_LOGI(TAG, "Verify: chip-tool descriptor read parts-list <node-id> %d", parent_endpoint_id);
+            }
+        }
+    }
+
     return ESP_OK;
 }
 
