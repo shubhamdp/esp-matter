@@ -80,12 +80,6 @@ endif(CONFIG_ESP_MATTER_ENABLE_MATTER_SERVER)
 target_sources(${COMPONENT_LIB} PRIVATE ${MATTER_SDK_PATH}/src/app/StorageDelegateWrapper.cpp
                                         ${MATTER_SDK_PATH}/src/app/SafeAttributePersistenceProvider.cpp)
 
-# For Xtensa chips, uint32_t was defined as 'unsigned' before v5.0, and after IDF v5.0 it is defined
-# as 'unsigned long', same as RISC-V. add this compile option to avoid format errors.
-# https://github.com/espressif/esp-idf/issues/6906#issuecomment-1207373706
-if (CONFIG_IDF_TARGET_ARCH_XTENSA AND (${IDF_VERSION_MAJOR} LESS 5))
-    idf_build_set_property(COMPILE_OPTIONS "-Wno-format" APPEND)
-endif()
 target_compile_options(${COMPONENT_LIB} PUBLIC
                        "-DCHIP_ADDRESS_RESOLVE_IMPL_INCLUDE_HEADER=<lib/address_resolve/AddressResolve_DefaultImpl.h>")
 

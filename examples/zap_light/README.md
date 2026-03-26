@@ -44,7 +44,7 @@ The following is the Memory and Flash Usage.
 
 -   `Bootup` == Device just finished booting up. Device is not
     commissionined or connected to wifi yet.
--   `After Commissioning` == Device is conneted to wifi and is also
+-   `After Commissioning` == Device is connected to wifi and is also
     commissioned and is rebooted.
 -   device used: esp32c3_devkit_m
 -   tested on:
@@ -60,7 +60,7 @@ The following is the Memory and Flash Usage.
 This should give you a good idea about the amount of free memory that is
 available for you to run your application's code.
 
-Applications that do not require BLE post commissioning, can disable it using app_ble_disable() once commissioning is complete. It is not done explicitly because of a known issue with esp32c3 and will be fixed with the next IDF release (v4.4.2).
+Applications that do not require BLE post commissioning, can disable it using app_ble_disable() once commissioning is complete.
 
 ## A2 Appendix FAQs
 
@@ -69,7 +69,7 @@ Applications that do not require BLE post commissioning, can disable it using ap
 The run_zaptool.py command is failing:
 
 -   Check that the connectedhomeip submodule is updated.
--   Revert any modifications in any of te files in the connectedhomeip
+-   Revert any modifications in any of the files in the connectedhomeip
     submodule, or any submodules in connectedhomeip, and try again.
 -   If you are still facing issues, reproduce the issue on the default
     example for the device and then raise an [issue](https://github.com/espressif/esp-matter/issues).
