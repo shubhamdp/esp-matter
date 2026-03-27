@@ -2366,7 +2366,7 @@ attribute_t *create_in_place_indicator(cluster_t *cluster, bool value)
                                          esp_matter_bool(value));
 }
 
-attribute_t *create_last_change_time(cluster_t *cluster, nullable<uint8_t> value)
+attribute_t *create_last_changed_time(cluster_t *cluster, nullable<uint8_t> value)
 {
     return esp_matter::attribute::create(cluster, HepaFilterMonitoring::Attributes::LastChangedTime::Id,
                                          ATTRIBUTE_FLAG_NULLABLE | ATTRIBUTE_FLAG_NONVOLATILE | ATTRIBUTE_FLAG_WRITABLE | ATTRIBUTE_FLAG_MANAGED_INTERNALLY,
