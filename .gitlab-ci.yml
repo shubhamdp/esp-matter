@@ -238,7 +238,6 @@ build_image:
     matrix:
       # Change the idf version here in case of idf version change MR.
       - IDF_VERSION:
-          - "v4.4.3"
           - "v5.4.1"
 
 .build_examples_template:
@@ -249,7 +248,6 @@ build_image:
   needs:
     - job: build_image
       optional: true
-    - job: check_typos
     - job: pre_commit_check
   tags:
     - build
@@ -470,42 +468,6 @@ build_nopytest_remaining_examples_manual:
   parallel: 2
 
 
-build_esp_matter_examples_idf_v4_4:
-  resource_group: build_esp_matter_examples_idf_v4_4
-  extends:
-        - .build_examples_template
-  image: ${DOCKER_IMAGE_NAME}:chip_${CHIP_SHORT_HASH}_idf_${IDF_CHECKOUT_REF}
-  allow_failure: true
-  artifacts:
-    paths:
-      - "examples/**/build*/size.json"
-      - "examples/**/build*/build_log.txt"
-      - "examples/**/build*/*.map"
-      - "examples/**/build*/*.bin"
-      - "examples/**/build*/flasher_args.json"
-      - "examples/**/build*/config/sdkconfig.json"
-      - "examples/**/build*/bootloader/*.bin"
-      - "examples/**/build*/partition_table/*.bin"
-    when: always
-    expire_in: 4 days
-  script:
-    - cd ${ESP_MATTER_PATH}
-    # idf v4.4 requires jinja < 3.1 so lets install the dependencies for idf v4.4
-    - pip install -r requirements_idf_v4.4.txt
-    # hack the construct==2.10.54 to make it work with idf-v4.4, Python3.12
-    # imp is not present in Python3.12 so remove it
-    - wget https://files.pythonhosted.org/packages/30/2f/e2e6bad1b80f744cf5c2a6d622e3dee698b43e6c040f980ae0ac0edd5e54/construct-2.10.54.tar.gz
-    - tar -xvzf construct-2.10.54.tar.gz
-    - sed -i 's/, imp$//g' construct-2.10.54/construct/core.py
-    - python3 -m pip install ./construct-2.10.54
-    - rm -rf construct-2.10.54*
-    - cd ${ESP_MATTER_PATH}/examples/light
-    - idf.py set-target esp32c3
-    - idf.py build
-  variables:
-    IDF_CHECKOUT_REF: "v4.4.3"
-
-
 build_esp_matter_examples_pytest_C3:
   resource_group: build_esp_matter_examples_pytest_C3
   extends:
@@ -682,7 +644,6 @@ build_managed_component_light:
     needs:
       - job: build_image
         optional: true
-      - job: check_typos
       - job: pre_commit_check
     script:
         - cd ${ESP_MATTER_PATH}/examples/managed_component_light
@@ -718,7 +679,6 @@ build_esp_rainmaker_apps:
     needs:
       - job: build_image
         optional: true
-      - job: check_typos
       - job: pre_commit_check
 
     artifacts:
@@ -760,7 +720,7 @@ build_docs:
     tags:
         - build
     needs:
-      - job: check_typos
+      - job: pre_commit_check
     variables:
         ESP_DOCS_LATEST_BRANCH_NAME: "main"
     artifacts:
@@ -822,21 +782,6 @@ deploy_docs_production:
         DOCS_DEPLOY_SERVER_USER: "$DOCS_PROD_SERVER_USER"
         DOCS_DEPLOY_PATH: "$DOCS_PROD_PATH"
         DOCS_DEPLOY_URL_BASE: "https://$DOCS_PROD_SERVER/$DOCS_PROD_PATH"
-
-check_typos:
-  image: $CI_DOCKER_REGISTRY/esp-env-v6.0:1
-  stage: pre_check
-  script:
-    - pip install codespell
-    - git fetch origin main
-    - |
-      FILES=$(git diff --name-only origin/main...HEAD)
-      echo "change files: $FILES"
-      if [ -n "$FILES" ]; then
-        ./tools/check_typos.sh $FILES
-      fi
-  tags:
-    - build
 
 pre_commit_check:
   image: $CI_DOCKER_REGISTRY/esp-env-v6.0:1

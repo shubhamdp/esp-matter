@@ -392,13 +392,6 @@ idf_build_set_property(COMPILE_OPTIONS "-Wno-error=uninitialized;-Wno-error=mayb
 idf_build_set_property(COMPILE_OPTIONS "-Wno-error=array-bounds" APPEND)
 idf_build_set_property(COMPILE_OPTIONS "-Wno-write-strings" APPEND)
 
-# For Xtensa chips, uint32_t was defined as 'unsigned' before v5.0, and after IDF v5.0 it is defined
-# as 'unsigned long', same as RISC-V. add this compile option to avoid format errors.
-# https://github.com/espressif/esp-idf/issues/6906#issuecomment-1207373706
-if (CONFIG_IDF_TARGET_ARCH_XTENSA AND (${IDF_VERSION_MAJOR} LESS 5))
-    idf_build_set_property(COMPILE_OPTIONS "-Wno-format" APPEND)
-endif()
-
 # Time sync client feature depends on read client, disable it when read client is disabled.
 if (CONFIG_DISABLE_READ_CLIENT)
     target_compile_options(${COMPONENT_LIB} PUBLIC "-DTIME_SYNC_ENABLE_TSC_FEATURE=0")
@@ -445,6 +438,6 @@ if (false AND CONFIG_CHIP_OTA_IMAGE_BUILD)
         INPUT_FILES ${BUILD_DIR}/${CMAKE_PROJECT_NAME}.bin
         OUTPUT_FILE ${BUILD_DIR}/${CMAKE_PROJECT_NAME}-ota.bin
     )
-    # Adding dependecy as app target so that this runs after images are ready
+    # Adding dependency as app target so that this runs after images are ready
     add_dependencies(chip-ota-image app)
 endif()

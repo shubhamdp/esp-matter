@@ -11,7 +11,7 @@ See the [docs](https://docs.espressif.com/projects/esp-matter/en/latest/esp32/de
 
 This example demonstrates auto subscription to only one remote on/off server from on/off client after binding of light to switch.
 For example, switch that have a led indicator which indicates the on-off state of the bound light. The subscription can keep the indicator on the switch sync with the light node.
--   Enable SUBSCRIBE_TO_ON_OFF_SERVER_AFTER_BINDING to enable this funcationality.
+-   Enable SUBSCRIBE_TO_ON_OFF_SERVER_AFTER_BINDING to enable this functionality.
 Please check [Bind light to switch](#21-bind-light-to-switch) for more details.
 
 ## 2. Post Commissioning Setup
@@ -186,7 +186,7 @@ The following is the Memory and Flash Usage.
 
 -   `Bootup` == Device just finished booting up. Device is not
     commissionined or connected to wifi yet.
--   `After Commissioning` == Device is conneted to wifi and is also
+-   `After Commissioning` == Device is connected to wifi and is also
     commissioned and is rebooted.
 -   device used: esp32c3_devkit_m
 -   tested on:
@@ -202,7 +202,7 @@ The following is the Memory and Flash Usage.
 This should give you a good idea about the amount of free memory that is
 available for you to run your application's code.
 
-Applications that do not require BLE post commissioning, can disable it using app_ble_disable() once commissioning is complete. It is not done explicitly because of a known issue with esp32c3 and will be fixed with the next IDF release (v4.4.2).
+Applications that do not require BLE post commissioning, can disable it using app_ble_disable() once commissioning is complete.
 
 ## 4. Dynamic Passcode
 
