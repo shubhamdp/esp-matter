@@ -13,23 +13,29 @@ We have put together a series of blog posts that introduces various aspects of M
 We recommend that you go through this `Espressif Matter Blog`_.
 
 Table of Contents
-=================
+-----------------
 
 .. toctree::
    :maxdepth: 2
+   :numbered:
 
-   1. Introduction <introduction>
-   2. Developing with the SDK <developing>
-   3. Matter Controller <controller>
-   4. Matter Certification <certification>
-   5. Production Considerations <production>
-   6. Security Considerations <security>
-   7. RAM and Flash Optimizations <optimizations>
-   8. API Reference <api-reference/index>
-   9. Integration with esp-insights <insights>
-   10. Application User Guide <app_guide>
-   11. Copyrights and Licenses<COPYRIGHT>
-   A1 Appendix FAQs <faq>
+   Introduction <introduction>
+   Developing with the SDK <developing>
+   Matter Controller <controller>
+   Matter Certification <certification>
+   Production Considerations <production>
+   Security Considerations <security>
+   RAM and Flash Optimizations <optimizations>
+   API Reference <api-reference/index>
+   Integration with esp-insights <insights>
+   Application User Guide <app_guide>
+   Copyrights and Licenses <COPYRIGHT>
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Appendix
+
+   FAQs <faq>
 
 .. _Matter: https://csa-iot.org/all-solutions/matter/
 .. _Espressif Matter Blog: https://blog.espressif.com/matter-38ccf1d60bcd

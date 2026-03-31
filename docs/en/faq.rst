@@ -1,8 +1,12 @@
-A1 Appendix FAQs
-================
+FAQs
+====
 
-A1.1 Compilation errors
------------------------
+.. sectnum::
+   :prefix: A
+   :depth: 2
+
+Compilation errors
+------------------
 
 I cannot build the application:
 
@@ -15,8 +19,8 @@ I cannot build the application:
 -  If you are still facing issues, reproduce it on the default
    example and then raise a `Github issue`_.
 
-A1.2 Device commissioning using chip-tool
------------------------------------------
+Device commissioning using chip-tool
+------------------------------------
 
 I cannot commission a new device through the chip-tool:
 
@@ -38,8 +42,8 @@ Bluetooth/BLE does not work on by device:
 -  If you are still facing issues, reproduce it on the default
    example for the device and then raise a `Github issue`_.
 
-A1.3 Device crashing
---------------------
+Device crashing
+---------------
 
 My device is crashing:
 
@@ -65,8 +69,8 @@ My device is crashing:
    -  If you have gdb enabled, run the command ``backtrace`` and share the
       output of gdb too.
 
-A1.4 Device not crashed but not responding
-------------------------------------------
+Device not crashed but not responding
+-------------------------------------
 
 My device is not responding to commands:
 
@@ -82,8 +86,8 @@ My device is not responding to commands:
    -  The complete device logs taken over UART.
 
 
-A1.5 Onboard LED not working
-----------------------------
+Onboard LED not working
+-----------------------
 
 The LED on my devkit is not working:
 
@@ -97,8 +101,8 @@ The LED on my devkit is not working:
    example for the device and then raise a `Github issue`_.
 
 
-A1.6 Using Rotating Device Identifier
--------------------------------------
+Using Rotating Device Identifier
+--------------------------------
 
 What is Rotating Device Identifier:
 
@@ -137,8 +141,8 @@ Difference between Rotating ID Unique ID and Unique ID
    -  it SHALL not be printed on the product or delivered with the product
 
 
-A1.7 ModuleNotFoundError: No module named 'lark'
-------------------------------------------------
+ModuleNotFoundError: No module named 'lark'
+-------------------------------------------
 
 Encountering the above error while building the esp-matter example could indicate that the steps outlined in the
 `getting the repository`_ section of the documentation were not properly followed.
@@ -164,8 +168,8 @@ However, if the error persists, you can try the following steps to resolve it:
         idf.py build
 
 
-A1.8 Why does free RAM increase after first commissioning
----------------------------------------------------------
+Why does free RAM increase after first commissioning
+----------------------------------------------------
 
 After the first commissioning, you may notice that the free RAM increases. This is because, by default,
 BLE is only used for the commissioning process. Once the commissioning is complete, BLE is deinitialized,
@@ -176,8 +180,8 @@ However, if you want to continue using the BLE even after the commissioning proc
 ``CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING``. This will ensure that the memory allocated to the BLE functionality
 is not released after the commissioning process, and the free RAM won't go up.
 
-A1.9 How to generate Matter Onboarding Codes (QR Code and Manual Pairing Code)
-------------------------------------------------------------------------------
+How to generate Matter Onboarding Codes (QR Code and Manual Pairing Code)
+-------------------------------------------------------------------------
 
 When creating a factory partition using ``esp-matter-mfg-tool``, both the QR code and manual pairing codes are generated.
 
@@ -213,8 +217,8 @@ Along with that, there are two more methods for generating Matter onboarding cod
 To create a QR code image, copy the QR code text and paste it into `CHIP QR Code`_.
 
 
-A1.10 Chip stack locking error ... Code is unsafe/racy
-------------------------------------------------------
+Chip stack locking error ... Code is unsafe/racy
+------------------------------------------------
 
     ::
 
@@ -250,8 +254,8 @@ To address this, there are two possible approaches:
         chip::DeviceLayer::PlatformMgr().ScheduleWork(WorkHandler, <intptr_t>(nullptr));
 
 
-A1.11 Firmware Version Number
------------------------------
+Firmware Version Number
+-----------------------
 
 Similar to the ESP-IDF's application versioning scheme, the ESP-Matter SDK provides two options for setting the firmware
 version. It depends on `CONFIG_APP_PROJECT_VER_FROM_CONFIG`_ option and by default option is disabled.
@@ -284,8 +288,8 @@ the following configuration options:
       version, even though the binary content may match the previous OTA image.
 
 
-A1.12 Stuck at "Solving dependencies requirements ....."
---------------------------------------------------------
+Stuck at "Solving dependencies requirements ....."
+--------------------------------------------------
 
 When building an example, if it is stuck at "Solving dependencies requirements..."
 you can resolve this issue by clearing the component manager cache.
@@ -299,8 +303,8 @@ you can resolve this issue by clearing the component manager cache.
         rm -rf ~/Library/Caches/Espressif/ComponentManager
 
 
-A1.13 ESP32-C2 log garbled, unable to perform Matter commissioning and other abnormal issues
---------------------------------------------------------------------------------------------
+ESP32-C2 log garbled, unable to perform Matter commissioning and other abnormal issues
+--------------------------------------------------------------------------------------
 
 When encountering the above issues, the following possible causes may exist:
 1. Incorrect baud rate settings. See `UART console baud rate`_
@@ -318,8 +322,8 @@ When encountering the above issues, the following possible causes may exist:
       Crystal is 26MHz
       MAC: 08:3a:8d:49:b3:90
 
-A1.14 Generating Matter Onboarding Codes on the device itself
--------------------------------------------------------------
+Generating Matter Onboarding Codes on the device itself
+-------------------------------------------------------
 
 The Passcode serves as both proof of possession for the device and the shared secret needed to establish
 the initial secure channel for onboarding.
@@ -341,11 +345,11 @@ along with the corresponding Spake2p verifier and onboarding payload, directly o
 
 Please check `#1128`_ and `#1126`_ for relevant discussion on Github issue
 
-A1.15 Using BLE after Matter commissioning
-------------------------------------------
+Using BLE after Matter commissioning
+------------------------------------
 
 Most Matter applications do not require BLE after commissioning. By default, BLE is deinitialized after commissioning
-to reclaim RAM and increase the available free heap. Refer to `A1.8 Why does free RAM increase after first commissioning`_
+to reclaim RAM and increase the available free heap. Refer to `Why does free RAM increase after first commissioning`_
 for more details.
 
 However, if BLE functionality is needed even after commissioning, you can disable the ``CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING``
@@ -376,8 +380,8 @@ Please refer to the `advance setup`_ section in the programming guide.
 This has been demonstrated in the `blemesh_bridge`_ examples.
 
 
-A1.16 Moving BSS Segments to PSRAM to Reduce Memory Usage
----------------------------------------------------------
+Moving BSS Segments to PSRAM to Reduce Memory Usage
+----------------------------------------------------
 
 The BSS section of libesp_matter.a and libCHIP.a can consume significant internal memory.
 For devices with PSRAM, you can move the BSS segments to external memory to significantly
@@ -404,8 +408,8 @@ significantly reducing the internal memory usage of your application.
 
 Please check `#1123`_ for relevant discussion on Github issue.
 
-A1.17 Updating attribute marked as ATTRIBUTE_FLAG_MANAGED_INTERNALLY
-----------------------------------------------------------------------
+Updating attribute marked as ATTRIBUTE_FLAG_MANAGED_INTERNALLY
+--------------------------------------------------------------
 
 When an attribute is marked with the flag ``ATTRIBUTE_FLAG_MANAGED_INTERNALLY``, application can not directly modify
 the attribute's value using ``esp_matter::attribute::update``. To update such attributes, retrieve the corresponding
