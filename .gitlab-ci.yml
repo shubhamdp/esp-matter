@@ -248,7 +248,6 @@ build_image:
   needs:
     - job: build_image
       optional: true
-    - job: check_typos
     - job: pre_commit_check
   tags:
     - build
@@ -645,7 +644,6 @@ build_managed_component_light:
     needs:
       - job: build_image
         optional: true
-      - job: check_typos
       - job: pre_commit_check
     script:
         - cd ${ESP_MATTER_PATH}/examples/managed_component_light
@@ -681,7 +679,6 @@ build_esp_rainmaker_apps:
     needs:
       - job: build_image
         optional: true
-      - job: check_typos
       - job: pre_commit_check
 
     artifacts:
@@ -723,7 +720,7 @@ build_docs:
     tags:
         - build
     needs:
-      - job: check_typos
+      - job: pre_commit_check
     variables:
         ESP_DOCS_LATEST_BRANCH_NAME: "main"
     artifacts:
@@ -785,21 +782,6 @@ deploy_docs_production:
         DOCS_DEPLOY_SERVER_USER: "$DOCS_PROD_SERVER_USER"
         DOCS_DEPLOY_PATH: "$DOCS_PROD_PATH"
         DOCS_DEPLOY_URL_BASE: "https://$DOCS_PROD_SERVER/$DOCS_PROD_PATH"
-
-check_typos:
-  image: $CI_DOCKER_REGISTRY/esp-env-v6.0:1
-  stage: pre_check
-  script:
-    - pip install codespell
-    - git fetch origin main
-    - |
-      FILES=$(git diff --name-only origin/main...HEAD)
-      echo "change files: $FILES"
-      if [ -n "$FILES" ]; then
-        ./tools/check_typos.sh $FILES
-      fi
-  tags:
-    - build
 
 pre_commit_check:
   image: $CI_DOCKER_REGISTRY/esp-env-v6.0:1
