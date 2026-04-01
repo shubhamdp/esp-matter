@@ -41,7 +41,7 @@ PYTEST_PASSPHRASE = gitlab_api.ci_gitlab_pytest_passphrase
 def test_matter_commissioning_c3(dut:Dut) -> None:
     light = dut
     # BLE start advertising
-    light.expect(r'chip\[DL\]\: Configuring CHIPoBLE advertising', timeout=20)
+    light.expect(r'Configuring CHIPoBLE advertising', timeout=20)
     # Start commissioning
     time.sleep(5)
     command = CHIP_TOOL_EXE + f" pairing ble-wifi 1 {PYTEST_SSID} {PYTEST_PASSPHRASE} 20202021 3840"
@@ -80,7 +80,7 @@ def test_matter_commissioning_c3(dut:Dut) -> None:
 def test_matter_commissioning_c2(dut:Dut) -> None:
     light = dut
     # BLE start advertising
-    light.expect(r'chip\[DL\]\: Configuring CHIPoBLE advertising', timeout=20)
+    light.expect(r'Configuring CHIPoBLE advertising', timeout=20)
     # Start commissioning
     time.sleep(5)
     command = CHIP_TOOL_EXE + f" pairing ble-wifi 1 {PYTEST_SSID} {PYTEST_PASSPHRASE} 20202021 3840"
@@ -252,8 +252,8 @@ def test_matter_commissioning_h2(dut:Tuple[Dut, Dut]) -> None:
     # For matter over thread commissioning need to reset host interface
     fixture_Init_interface()
     # BLE start advertising
-    light.expect(r'chip\[DL\]\: Configuring CHIPoBLE advertising', timeout=20)
-    ot_br.expect(r'chip\[DL\]\: Configuring CHIPoBLE advertising', timeout=20)
+    light.expect(r'Configuring CHIPoBLE advertising', timeout=20)
+    ot_br.expect(r'Configuring CHIPoBLE advertising', timeout=20)
     # Start commissioning OTBR
     time.sleep(2)
     command = CHIP_TOOL_EXE + f" pairing ble-wifi 1 {PYTEST_SSID} {PYTEST_PASSPHRASE} 20202021 3584"
