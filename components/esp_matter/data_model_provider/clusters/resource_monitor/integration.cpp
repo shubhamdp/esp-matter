@@ -54,10 +54,13 @@ esp_err_t GetClusterConfig(EndpointId endpointId, ClusterId clusterId,
     VerifyOrReturnError(feature_val.type == ESP_MATTER_VAL_TYPE_BITMAP32, ESP_FAIL);
     enabledFeatures = BitFlags<ResourceMonitoring::Feature>(feature_val.val.u32);
     esp_matter_attr_val_t attr_val;
-    ESP_RETURN_ON_ERROR(get_attr_val(cluster, Attributes::DegradationDirection::Id, attr_val), "ResourceMonitoring",
-                        "Failed to get DegradationDirection");
-    VerifyOrReturnError(attr_val.type == ESP_MATTER_VAL_TYPE_ENUM8, ESP_FAIL);
-    aDegradationDirection = (Attributes::DegradationDirection::TypeInfo::Type)attr_val.val.u8;
+    if (ESP_OK == get_attr_val(cluster, Attributes::DegradationDirection::Id, attr_val)) {
+        VerifyOrReturnError(attr_val.type == ESP_MATTER_VAL_TYPE_ENUM8, ESP_FAIL);
+        aDegradationDirection = (Attributes::DegradationDirection::TypeInfo::Type)attr_val.val.u8;
+    } else {
+        aDegradationDirection = static_cast<Attributes::DegradationDirection::TypeInfo::Type>(0);
+        ESP_LOGW("ResourceMonitoring", "Failed to get DegradationDirection, falling back to 0");
+    }
     if (esp_matter::command::get(cluster, Commands::ResetCondition::Id, esp_matter::COMMAND_FLAG_ACCEPTED)) {
         aResetConditionCommandSupported = true;
     } else {
