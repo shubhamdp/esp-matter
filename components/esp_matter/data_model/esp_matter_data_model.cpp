@@ -1037,14 +1037,22 @@ esp_err_t set_val(uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_
         return set_val_via_write_attribute(endpoint_id, cluster_id, attribute_id, val);
     }
 
-    if (!(flags & ATTRIBUTE_FLAG_MANAGED_INTERNALLY)) {
-        // this updates the value of attribute in the esp-matter storage
-        return attribute::set_val_internal(attr, val, call_callbacks);
+    // Code-driven clusters own their value inside the SCI cluster instance; the legacy
+    // esp-matter attribute store is dead for them. Writing there via set_val_internal would
+    // return ESP_OK without the value ever reaching the controller.
+    // ATTRIBUTE_FLAG_MANAGED_INTERNALLY flag was dropped from migrated clusters, so the
+    // registry is the real signal for "this cluster is code-driven".
+    bool code_driven = data_model::provider::get_instance().registry().Get(
+                           chip::app::ConcreteClusterPath(endpoint_id, cluster_id)) != nullptr;
+
+    if (code_driven) {
+        // No public setter path exists yet for these non-writable attributes, so fail loudly
+        // instead of silently "succeeding" against the dead legacy store.
+        return ESP_ERR_NOT_SUPPORTED;
     }
 
-    // TODO: If not writable, we could use the cluster-specific setter API to update the value
-    //       with the code-driven effort, we can get the cluster object and call the setter API
-    return ESP_ERR_NOT_SUPPORTED;
+    // Legacy esp-matter-managed attribute: the esp-matter store is the source of truth.
+    return attribute::set_val_internal(attr, val, call_callbacks);
 }
 
 esp_err_t set_val(attribute_t *attribute, esp_matter_attr_val_t *val, bool call_callbacks)
