@@ -74,6 +74,41 @@ Each test file has its own `setup_*()` function that calls `esp_matter::start()`
 Since only one setup can succeed per boot, tests are grouped so each group runs after a fresh QEMU reboot.
 Each pytest function (eg: `test_get_val`, `test_get_val_type`, `test_update_report`) gets its own QEMU instance.
 
+## Running Tests with esp-emu (no hardware needed)
+
+Same tests can also run under [esp-emu](https://github.com/espressif/esp-emulator), Espressif's lightweight RISC-V emulator. `conftest.py` spawns `esp-emu` per test with its UART served over TCP, and pytest-embedded connects via `socket://`.
+
+### Prerequisites
+
+Install esp-emu:
+```bash
+curl -fsSL https://raw.githubusercontent.com/espressif/esp-emulator/main/install.sh | sh
+```
+
+### Build and Run
+
+```bash
+cd examples/unit_test_app
+idf.py set-target esp32c3 build merge-bin   # merge-bin produces build/merged-binary.bin
+
+pytest pytest_unit_test_app.py \
+    --target esp32c3 \
+    -m emu \
+    --embedded-services idf,serial \
+    --port socket://127.0.0.1:5555
+```
+
+### Quick smoke test (no pytest)
+
+esp-emu can drive the Unity menu by itself — handy to check a build boots and a group passes:
+
+```bash
+esp-emu --chip esp32c3 --firmware build/merged-binary.bin \
+    --inject-on "Press ENTER to see the list of tests" --inject '[get_val]\n' \
+    --exit-on "Enter next test" --timeout 120s | tee /tmp/unity.log
+! grep -q ":FAIL" /tmp/unity.log
+```
+
 ## Extending the Tests
 
 ### Adding tests to existing component
@@ -103,7 +138,8 @@ set(TEST_COMPONENTS "esp_matter new_component" CACHE STRING "List of components 
 ```python
 @pytest.mark.host_test
 @pytest.mark.qemu
+@pytest.mark.emu
 @pytest.mark.esp32c3
-def test_my_unit_tests(dut: QemuDut) -> None:
+def test_my_unit_tests(dut: Dut) -> None:
     run_group(dut, 'my_test_group')
 ```
