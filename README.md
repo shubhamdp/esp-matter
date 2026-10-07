@@ -51,3 +51,8 @@ Refer the [Programming Guide](https://docs.espressif.com/projects/esp-matter/en/
 
 ## Matter Specifications
 Download the Matter specification from [CSA's official site](https://csa-iot.org/developer-resource/specifications-download-request/)
+
+
+[Alt text](matter-versions.svg)
+
+
