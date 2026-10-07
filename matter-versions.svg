@@ -1,0 +1,38 @@
+<svg width="500" height="180" xmlns="http://w3.org" font-family="Arial, sans-serif">
+  <!-- Table Container Background -->
+  <rect width="100%" height="100%" fill="#ffffff" rx="8" stroke="#dddddd" stroke-width="1"/>
+
+  <!-- Table Header -->
+  <rect width="100%" height="45" fill="#f2f2f2" rx="8"/>
+  <text x="20" y="28" font-weight="bold" fill="#333333" font-size="14">Branch Name</text>
+  <text x="350" y="28" font-weight="bold" fill="#333333" font-size="14">Link</text>
+
+  <!-- Row 1: New York -->
+  <g transform="translate(0, 45)">
+    <rect width="100%" height="40" fill="#ffffff"/>
+    <text x="20" y="25" fill="#555555" font-size="14">New York Branch</text>
+    <a href="https://example.com" target="_blank">
+      <text x="350" y="25" fill="#0066cc" font-size="14" font-weight="bold" text-decoration="underline">Visit Branch</text>
+    </a>
+    <line x1="0" y1="40" x2="500" y2="40" stroke="#eeeeee" stroke-width="1"/>
+  </g>
+
+  <!-- Row 2: London -->
+  <g transform="translate(0, 85)">
+    <rect width="100%" height="40" fill="#f9f9f9"/>
+    <text x="20" y="25" fill="#555555" font-size="14">London Branch</text>
+    <a href="https://example.com" target="_blank">
+      <text x="350" y="25" fill="#0066cc" font-size="14" font-weight="bold" text-decoration="underline">Visit Branch</text>
+    </a>
+    <line x1="0" y1="40" x2="500" y2="40" stroke="#eeeeee" stroke-width="1"/>
+  </g>
+
+  <!-- Row 3: Tokyo -->
+  <g transform="translate(0, 125)">
+    <rect width="100%" height="40" fill="#ffffff"/>
+    <text x="20" y="25" fill="#555555" font-size="14">Tokyo Branch</text>
+    <a href="https://example.com" target="_blank">
+      <text x="350" y="25" fill="#0066cc" font-size="14" font-weight="bold" text-decoration="underline">Visit Branch</text>
+    </a>
+  </g>
+</svg>
